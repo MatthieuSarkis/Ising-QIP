@@ -1,0 +1,6 @@
+matplotlib
+numpy
+ipykernel
+qiskit
+qiskit_machine_learning
+torch
