@@ -9,6 +9,8 @@
 * ipykernel
 * qiskit
 * qiskit_machine_learning
+* ipywidgets
+* pylatexenc
 * torch
 
 ## Installation
