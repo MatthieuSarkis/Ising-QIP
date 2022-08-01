@@ -15,27 +15,27 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
 class GAUSSIAN(KernelRidgeRegression):
     """ Gaussian Kernel for Kernel Ridge Regression. """
 
     def __init__(
         self,
-        *args, 
+        *args,
         **kwargs,
     ) -> None:
         r""" Initialize the Gaussian Kernel Ridge Regression from parent's init. """
-        
-        super(GAUSSIAN, self).__init__(*args, **kwargs)  
+
+        super(GAUSSIAN, self).__init__(*args, **kwargs)
         self.name = 'gaussian'
-   
+
     def kernel(
         self,
         x1: np.ndarray,
         x2: np.ndarray,
     ) -> np.ndarray:
-        r""" Compute the Gaussian Kernel. 
+        r""" Compute the Gaussian Kernel.
         Args:
             x1: A 1-D array data vector.
             x2: A 1-D array data vector.
@@ -43,7 +43,7 @@ class GAUSSIAN(KernelRidgeRegression):
         Returns:
             Th kernel matrix.
         """
-         
+
         pairwise_distances = np.array(cdist(x1, x2, 'euclidean'))
         K = np.exp(-pairwise_distances**2 / (2 * self.sigma**2))
         return np.array(K)

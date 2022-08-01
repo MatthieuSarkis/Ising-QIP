@@ -17,7 +17,7 @@ import itertools
 from scipy import linalg
 from typing import Dict
 
-from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
 class QUANTUM_KERNEL(KernelRidgeRegression):
 

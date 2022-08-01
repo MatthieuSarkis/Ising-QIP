@@ -19,10 +19,10 @@ from typing import Tuple
 from src.data_factory.pca import PCA
 from src.data_factory.utils import Normalizer
 from src.data_factory.utils import rmae, train_test_split
-from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
-from src.kernel_ridge_regression.kernels.gaussian import GAUSSIAN
-from src.kernel_ridge_regression.kernels.quantum_zz_vectorized import QUANTUM_ZZ_VECTORIZED
-from src.kernel_ridge_regression.kernels.quantum_raw_vectorized import QUANTUM_RAW_VECTORIZED
+from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.quantum_regression.kernels.gaussian import GAUSSIAN
+from src.quantum_regression.kernels.quantum_zz_vectorized import QUANTUM_ZZ_VECTORIZED
+from src.quantum_regression.kernels.quantum_raw_vectorized import QUANTUM_RAW_VECTORIZED
 from src.benchmark.benchmark import Benchmark
 
 def load_data(

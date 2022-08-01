@@ -15,7 +15,7 @@ import itertools
 import numpy as np
 from typing import Dict, Optional, Union, Tuple
 
-from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
 class ProjectedQuantumKernel(KernelRidgeRegression):
     r"""
@@ -30,17 +30,17 @@ class ProjectedQuantumKernel(KernelRidgeRegression):
         self,
         n_non_traced_out_qubits: Union[int, str] = 1,
         precompute: bool = False,
-        *args, 
+        *args,
         **kwargs,
     ) ->None:
-        """ Initialize the Projected Kernel Ridge Regression from parent's init. 
-        
-        Args: 
-            n_non_traced_out_qubits: size of the system after the partial traces. 
+        """ Initialize the Projected Kernel Ridge Regression from parent's init.
+
+        Args:
+            n_non_traced_out_qubits: size of the system after the partial traces.
             Can take the string value 'all' to keep all qubits.
         """
 
-        super(ProjectedQuantumKernel, self).__init__(*args, **kwargs)  
+        super(ProjectedQuantumKernel, self).__init__(*args, **kwargs)
         self.hash_density_matrix: Dict[int, np.ndarray] = {}
         self.hash_partial_traces: Dict[int, np.ndarray] = {}
         self.n_qubits: Optional[int] = None
@@ -53,10 +53,10 @@ class ProjectedQuantumKernel(KernelRidgeRegression):
         X2: np.ndarray,
     ) -> np.ndarray:
         r""" Compute the Projected Quantum Kernel between two datasets X1 and X2.
-        Args:   
+        Args:
             X1: A dataset.
             X2: A dataset.
-        Returns:    
+        Returns:
             The Projected Quantum Kernel matrix.
         """
 
@@ -85,7 +85,7 @@ class ProjectedQuantumKernel(KernelRidgeRegression):
                 for ind,key in enumerate(key2):
                     if not key in self.hash_density_matrix:
                         self.hash_density_matrix[key] = RHO2[ind]
-                    
+
         kernel = np.zeros(shape=(M, N))
 
         for i in range(M):
@@ -108,7 +108,7 @@ class ProjectedQuantumKernel(KernelRidgeRegression):
                     key1 = hash((t, rho_x1.tobytes()))
                     if not key1 in self.hash_partial_traces:
                         self.hash_partial_traces[key1] = self.partial_trace(rho_x1, t)
-                    
+
                     key2 = hash((t, rho_x2.tobytes()))
                     if not key2 in self.hash_partial_traces:
                         self.hash_partial_traces[key2] = self.partial_trace(rho_x2, t)
@@ -156,8 +156,8 @@ class ProjectedQuantumKernel(KernelRidgeRegression):
 
     def partial_trace(
         self,
-        rho: np.ndarray, 
-        qubits_to_keep: Tuple[int],  
+        rho: np.ndarray,
+        qubits_to_keep: Tuple[int],
     ) -> np.ndarray:
         """ Calculate the partial trace for qubit system. Code made by Huo Chen neversakura and accessible at: https://gist.github.com/neversakura/d6a60b4bb2990d252e9e89e5629d5553.
         Args:

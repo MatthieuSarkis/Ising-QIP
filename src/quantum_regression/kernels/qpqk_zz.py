@@ -23,8 +23,8 @@ from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit.ignis.verification.tomography import state_tomography_circuits, StateTomographyFitter
 from qiskit.result import Result
 
-from src.kernel_ridge_regression.abstract_kernels.qiskit_kernel import QiskitKernel
-from src.kernel_ridge_regression.abstract_kernels.projected_quantum_kernel import ProjectedQuantumKernel
+from src.quantum_regression.abstract_kernels.qiskit_kernel import QiskitKernel
+from src.quantum_regression.abstract_kernels.projected_quantum_kernel import ProjectedQuantumKernel
 
 class QPQK_ZZ(ProjectedQuantumKernel, QiskitKernel):
     """ Qiskit implementation of the Projected Quantum Kernekl for Kernel Ridge Regression with the ZZ feature map."""
@@ -33,7 +33,7 @@ class QPQK_ZZ(ProjectedQuantumKernel, QiskitKernel):
         self,
         reps: Optional[int] = 1,
         entanglement: Optional[str] = 'full',
-        *args, 
+        *args,
         **kwargs,
     ) ->None:
         """ Initialize the Projected Kernel Ridge Regression from parent's init. """
@@ -73,19 +73,19 @@ class QPQK_ZZ(ProjectedQuantumKernel, QiskitKernel):
             results = self.qi.execute(circuits=qc, had_transpiled=True)
 
             # Split the results into to Result objects for calibration and kernel computation
-            cal_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            cal_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[:len(cal_qc)]
             )
 
-            data_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            data_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[len(cal_qc):]
             )
 
@@ -123,29 +123,29 @@ class QPQK_ZZ(ProjectedQuantumKernel, QiskitKernel):
             cal_qc = transpile(meas_calibs, self.qi.backend)
             # qc = cal_qc + qc
             qc = meas_calibs + qc
- 
+
             results = self.qi.execute(circuits=qc, had_transpiled=False)
-            
+
             # Split the results into to Result objects for calibration and kernel computation
-            cal_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            cal_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[:len(cal_qc)]
             )
-            
+
             # Apply measurement calibration and computer the calibration filter
             meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
 
             # Apply the calibration filter to the results and get the counts
             tomo_fitters = []
             for i in range(X.shape[0]):
-                data_res = Result(backend_name= results.backend_name, 
-                    backend_version= results.backend_version, 
-                    qobj_id= results.qobj_id, 
-                    job_id= results.job_id, 
-                    success= results.success, 
+                data_res = Result(backend_name= results.backend_name,
+                    backend_version= results.backend_version,
+                    qobj_id= results.qobj_id,
+                    job_id= results.job_id,
+                    success= results.success,
                     results = results.results[len(cal_qc) + i * num_meas:len(cal_qc) + (i+1) * num_meas]
                 )
                 job = meas_filter.apply(data_res)
@@ -154,18 +154,18 @@ class QPQK_ZZ(ProjectedQuantumKernel, QiskitKernel):
             results = self.qi.execute(circuits=qc, had_transpiled=True)
             tomo_fitters = []
             for i in range(X.shape[0]):
-                job = Result(backend_name= results.backend_name, 
-                    backend_version= results.backend_version, 
-                    qobj_id= results.qobj_id, 
-                    job_id= results.job_id, 
-                    success= results.success, 
+                job = Result(backend_name= results.backend_name,
+                    backend_version= results.backend_version,
+                    qobj_id= results.qobj_id,
+                    job_id= results.job_id,
+                    success= results.success,
                     results = results.results[len(cal_qc) + i * num_meas:len(cal_qc) + (i+1) * num_meas]
                 )
                 tomo_fitters.append(StateTomographyFitter(job, qc[len(cal_qc) + i * num_meas:len(cal_qc) + (i+1) * num_meas]))
 
         RHO = [tomo_fitter.fit(method='lstsq') for tomo_fitter in tomo_fitters]
         return RHO
-    
+
     def _set_n_qubits(
         self,
         X: np.ndarray

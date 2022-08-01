@@ -19,7 +19,7 @@ from scipy import linalg
 PAULI_Z = np.array([[1, 0], [0, -1]])
 HADAMARD = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
-from src.kernel_ridge_regression.abstract_kernels.quantum_kernel import QUANTUM_KERNEL
+from src.quantum_regression.abstract_kernels.quantum_kernel import QUANTUM_KERNEL
 
 class QUANTUM_ZZ_VECTORIZED(QUANTUM_KERNEL):
 

@@ -15,13 +15,13 @@
 
 #include <math.h>
 
-float T_critical(int L)
+float T_critical(int L) // In case one wants to use the finite size definition of the critical temperature
 {
     float Tc = 2 / log(1 + sqrt(2));
     return Tc / (1 + 5 / (4.0 * L));
 }
 
-int L = 128;
+int L = 32;
 int n_steps_initial = 1000;
 int n_steps_thermalize = 100;
 int n_steps_generation = 10;
@@ -32,6 +32,6 @@ float dT = 0.010;
 bool binary = true;
 
 //float Tc = T_critical(L);
-float Tc = 2 / log(1 + sqrt(2));
+float Tc = 2 / log(1 + sqrt(2)); // Use the infinite lattice size critical temperature
 
 #endif /* params_h */

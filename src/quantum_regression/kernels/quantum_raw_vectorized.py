@@ -14,7 +14,7 @@ import math
 import numpy as np
 from typing import Optional
 
-from src.kernel_ridge_regression.abstract_kernels.quantum_kernel import QUANTUM_KERNEL
+from src.quantum_regression.abstract_kernels.quantum_kernel import QUANTUM_KERNEL
 
 class QUANTUM_RAW_VECTORIZED(QUANTUM_KERNEL):
 

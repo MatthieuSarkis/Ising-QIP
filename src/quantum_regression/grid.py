@@ -18,7 +18,7 @@ from tqdm import tqdm
 from typing import Callable, Dict, List
 
 from src.data_factory.utils import rmae
-from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
 class GRID():
 

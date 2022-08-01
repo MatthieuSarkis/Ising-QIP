@@ -25,15 +25,15 @@ from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit_machine_learning.circuit.library import RawFeatureVector
 from qiskit.result import Result
 
-from src.kernel_ridge_regression.abstract_kernels.qiskit_kernel import QiskitKernel
-from src.kernel_ridge_regression.abstract_kernels.projected_quantum_kernel import ProjectedQuantumKernel
+from src.quantum_regression.abstract_kernels.qiskit_kernel import QiskitKernel
+from src.quantum_regression.abstract_kernels.projected_quantum_kernel import ProjectedQuantumKernel
 
 class QPQK_RAW(ProjectedQuantumKernel, QiskitKernel):
     """ Qiskit implementation of the Projected Quantum Kernekl for Kernel Ridge Regression with raw data encoded in quantum states."""
 
     def __init__(
         self,
-        *args, 
+        *args,
         **kwargs,
     ) ->None:
         """ Initialize the Projected Kernel Ridge Regression from parent's init. """
@@ -77,22 +77,22 @@ class QPQK_RAW(ProjectedQuantumKernel, QiskitKernel):
             results = self.qi.execute(circuits=qc, had_transpiled=True)
 
             # Split the results into to Result objects for calibration and kernel computation
-            cal_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            cal_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[:len(cal_qc)]
             )
 
-            data_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            data_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[len(cal_qc):]
             )
-            
+
             # Apply measurement calibration and computer the calibration filter
             meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
 
@@ -142,26 +142,26 @@ class QPQK_RAW(ProjectedQuantumKernel, QiskitKernel):
             meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
             cal_qc = transpile(meas_calibs, self.qi.backend)
             qc = cal_qc + qc
- 
+
             results = self.qi.execute(circuits=qc, had_transpiled=True)
-            
+
             # Split the results into to Result objects for calibration and kernel computation
-            cal_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            cal_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[:len(cal_qc)]
             )
 
-            data_res = Result(backend_name= results.backend_name, 
-                backend_version= results.backend_version, 
-                qobj_id= results.qobj_id, 
-                job_id= results.job_id, 
-                success= results.success, 
+            data_res = Result(backend_name= results.backend_name,
+                backend_version= results.backend_version,
+                qobj_id= results.qobj_id,
+                job_id= results.job_id,
+                success= results.success,
                 results = results.results[len(cal_qc):]
             )
-            
+
             # Apply measurement calibration and computer the calibration filter
             meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
 
@@ -182,7 +182,7 @@ class QPQK_RAW(ProjectedQuantumKernel, QiskitKernel):
         counts: Dict[str,int],
         num_features: int,
     ) -> ndarray:
-        """ Get the density matrix from data counts. 
+        """ Get the density matrix from data counts.
         Args:
             counts: A dictionary of counts.
             num_features: The number of features in the dataset.

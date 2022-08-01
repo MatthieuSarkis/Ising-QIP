@@ -16,8 +16,8 @@ import json
 import os
 import torch
 
-from src.data_factory.percolation import generate_percolation_data 
-from src.cnn.cnn import CNN
+from src.data_factory.percolation import generate_percolation_data
+from src.classical_regression.cnn import CNN
 
 def main(args):
 
@@ -30,7 +30,7 @@ def main(args):
         split=True,
         save_dir=None
     )
-    
+
     model = CNN(
         lattice_size=args.lattice_size,
         n_conv_cells=4,
@@ -41,7 +41,7 @@ def main(args):
         device=args.device,
         save_dir=save_dir
     )
-    
+
     model._train(
         epochs=args.epochs,
         X_train=X_train,
@@ -58,7 +58,7 @@ def main(args):
 if __name__ == '__main__':
 
     parser = ArgumentParser()
-    
+
     parser.add_argument("--save_dir", type=str, default='./saved_models/cnn')
     parser.add_argument("--lattice_size", type=int, default=128)
     parser.add_argument("--dataset_size", type=int, default=1024)
@@ -70,6 +70,6 @@ if __name__ == '__main__':
     parser.add_argument('--save_checkpoints', dest='save_checkpoints', action='store_true')
     parser.add_argument('--no-save_checkpoints', dest='save_checkpoints', action='store_false')
     parser.set_defaults(save_checkpoints=True)
-    
+
     args = parser.parse_args()
     main(args)
