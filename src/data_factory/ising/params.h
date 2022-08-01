@@ -21,7 +21,7 @@ float T_critical(int L) // In case one wants to use the finite size definition o
     return Tc / (1 + 5 / (4.0 * L));
 }
 
-int L = 32;
+int L = 2;
 int n_steps_initial = 1000;
 int n_steps_thermalize = 100;
 int n_steps_generation = 10;
