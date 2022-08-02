@@ -3,7 +3,6 @@ __pycache__
 .ipynb_checkpoints
 .env/
 .vscode/
-data/
 *.egg-info/
 build/
 dist/
