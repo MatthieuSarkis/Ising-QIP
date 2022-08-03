@@ -60,8 +60,9 @@ def make_grid(
     variance_data: float,
 ) -> Tuple[List[float], List[float]]:
 
-    SIGMA = [2.0**k for k in range(5, 15)]
+    SIGMA = [2.0**k for k in range(5, 7)]
     RIDGE_PARAMETER = map(lambda x: x / (feature_dim * variance_data), [0.5, 1.0, 3.0, 5.0, 20.0]) # careful with normalization, should go to the num in our convention (1/sigma^2 vs. gamma in scikit-learn)
+    #RIDGE_PARAMETER = map(lambda x: x / (feature_dim * variance_data), [0.5]) # careful with normalization, should go to the num in our convention (1/sigma^2 vs. gamma in scikit-learn)
 
     return SIGMA, RIDGE_PARAMETER
 
@@ -88,30 +89,16 @@ def instantiate_regressor(args) -> KernelRidgeRegression:
 def main(args) -> None:
 
     # Create the log directory tree
-    save_directory = os.path.join(
-        "./saved_models",
-        "grid",
-        'regressor={}'.format(args.regressor)
-    )
-
+    save_directory = os.path.join("./saved_models", "grid", 'regressor={}'.format(args.regressor))
     os.makedirs(save_directory, exist_ok=True)
 
     # Load the data
-    X_train, y_train, X_val, y_val = load_data(
-        image_size=args.image_size,
-        dataset_size=args.dataset_size
-    )
+    X_train, y_train, X_val, y_val = load_data(image_size=args.image_size, dataset_size=args.dataset_size)
 
     # Instanciate the regressor and the grid
     SIGMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], variance_data=np.var(X_train))
     regressor = instantiate_regressor(args=args)
-
-    grid = Grid(
-        regressor=regressor,
-        ridge_parameter=RIDGE_PARAMETER,
-        sigma=SIGMA,
-        save_directory=save_directory
-    )
+    grid = Grid(regressor=regressor, ridge_parameter=RIDGE_PARAMETER, sigma=SIGMA, save_directory=save_directory)
 
     # Run the grid search
     print(save_directory)
