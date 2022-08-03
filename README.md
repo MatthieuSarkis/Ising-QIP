@@ -27,6 +27,7 @@ Modify src/data_factory/ising/params.h as needed, then compile and run as follow
 ```shell
 g++ src/data_factory/ising/main.cpp -std=c++17 -O3 -o src/data_factory/ising/ising
 ./src/data_factory/ising/ising
+```
 
 ## License
 [Apache License 2.0](https://github.com/MatthieuSarkis/Ising-QIP/blob/master/LICENSE)
