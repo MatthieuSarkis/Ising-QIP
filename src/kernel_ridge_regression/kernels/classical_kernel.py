@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis) and Adel Sohbi (https://github.com/adelshb).
+# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis).
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -15,9 +15,9 @@
 import numpy as np
 from scipy.spatial.distance import cdist
 
-from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
-class GAUSSIAN(KernelRidgeRegression):
+class Gaussian(KernelRidgeRegression):
     """ Gaussian Kernel for Kernel Ridge Regression. """
 
     def __init__(
@@ -27,7 +27,7 @@ class GAUSSIAN(KernelRidgeRegression):
     ) -> None:
         r""" Initialize the Gaussian Kernel Ridge Regression from parent's init. """
 
-        super(GAUSSIAN, self).__init__(*args, **kwargs)
+        super(Gaussian, self).__init__(*args, **kwargs)
         self.name = 'gaussian'
 
     def kernel(

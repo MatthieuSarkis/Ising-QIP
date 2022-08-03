@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Matthieu Sarkis, https://github.com/MatthieuSarkis
+# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis).
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -17,10 +17,11 @@ import numpy as np
 from tqdm import tqdm
 from typing import Callable, Dict, List
 
-from src.data_factory.utils import rmae
-from src.quantum_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
+from src.utils.loss_functions import rmae
+from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
 
-class GRID():
+
+class Grid():
 
     def __init__(
         self,
@@ -31,7 +32,7 @@ class GRID():
         criterion: Callable[[np.ndarray, np.ndarray], np.ndarray] = rmae,
     ) -> None:
 
-        super(GRID, self).__init__()
+        super(Grid, self).__init__()
         self.name = 'grid'
         self.regressor = regressor
         self.criterion = criterion
@@ -128,19 +129,8 @@ class GRID():
         d['val_size'] = self.dataset['X_val'].shape[0]
         d['regressor_name'] = self.regressor.name
         d[self.criterion.__name__] = self.J
-
-        if hasattr(self.regressor, 'n_non_traced_out_qubits'):
-            d['n_non_traced_out_qubits'] = self.regressor.n_non_traced_out_qubits
-        if hasattr(self.regressor, 'entanglement'):
-            d['entanglement'] = self.regressor.entanglement
-        if hasattr(self.regressor, 'reps'):
-            d['reps'] = self.regressor.reps
-        if hasattr(self.regressor, 'n_qubits'):
-            d['n_qubits'] = self.regressor.n_qubits
         if hasattr(self.regressor, 'mitigate'):
             d['mitigate'] = self.regressor.mitigate
-        if hasattr(self.regressor, 'kernel_type'):
-            d['kernel_type'] = self.regressor.kernel_type
 
         self.best_hyperparameters_json = os.path.join(save_directory, 'hyperparams.json')
 

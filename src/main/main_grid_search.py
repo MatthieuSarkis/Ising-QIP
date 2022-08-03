@@ -11,7 +11,6 @@
 # that they have been altered from the originals.
 
 from argparse import ArgumentParser
-import json
 import os
 import glob
 import numpy as np
@@ -24,7 +23,6 @@ from src.kernel_ridge_regression.kernels.classical_kernel import Gaussian
 from src.kernel_ridge_regression.kernels.quantum_kernel import Quantum_Kernel
 from src.kernel_ridge_regression.grid import Grid
 from src.utils.train_test_split import train_test_split
-from src.utils.loss_functions import rmae
 
 
 def load_data(
@@ -67,22 +65,13 @@ def make_grid(
 
     return SIGMA, RIDGE_PARAMETER
 
-def instantiate_regressor(
-    args,
-    sigma: float,
-    ridge_parameter: float
-) -> KernelRidgeRegression:
+def instantiate_regressor(args) -> KernelRidgeRegression:
 
     if args.regressor == 'gaussian':
-        regressor = Gaussian(
-            sigma=sigma,
-            ridge_parameter=ridge_parameter,
-        )
+        regressor = Gaussian()
 
     elif args.regressor == 'quantum':
         regressor = Quantum_Kernel(
-            sigma=sigma,
-            ridge_parameter=ridge_parameter,
             backend_type=args.backend_type,
             backend_name=args.backend_name,
             mitigate=args.mitigate,
@@ -95,7 +84,6 @@ def instantiate_regressor(
         )
 
     return regressor
-
 
 def main(args) -> None:
 
@@ -125,32 +113,10 @@ def main(args) -> None:
         save_directory=save_directory
     )
 
-    with open(os.path.join(save_directory, 'hyperparams.json')) as f:
-        hyperparams = json.load(f)
-
-    regressor = instantiate_regressor(
-        args=args,
-        sigma=hyperparams['sigma'],
-        ridge_parameter=hyperparams['ridge_parameter']
-    )
-
+    # Run the grid search
     print(save_directory)
-
-    regressor.fit_choleski(
-        X=X_train,
-        y=y_train
-    )
-
-    loss = regressor.evaluate(
-        X=X_val,
-        y=y_val,
-        loss=rmae
-    )
-
-    with open(os.path.join(save_directory, 'single_loss.txt'), 'w') as f:
-        f.write("Train dataset size = {}\n".format(X_train.shape[0]))
-        f.write("Validation dataset size = {}\n".format(X_val.shape[0]))
-        f.write("Validation loss (relative MAE in %) = {:.2f}".format(loss * 100))
+    grid.fit(X_train, y_train, X_val, y_val)
+    #print(grid.theta, grid.evaluate_best_model())
 
 if __name__ == '__main__':
 

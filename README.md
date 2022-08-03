@@ -5,6 +5,7 @@
 * c++17
 * python 3.8.10
 * matplotlib
+* tqdm
 * numpy
 * ipykernel
 * qiskit

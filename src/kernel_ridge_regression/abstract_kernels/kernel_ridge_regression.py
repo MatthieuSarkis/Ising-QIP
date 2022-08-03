@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis) and Adel Sohbi (https://github.com/adelshb).
+# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis).
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -31,7 +31,7 @@ class KernelRidgeRegression(ABC):
     def __init__(
         self,
         ridge_parameter: Optional[float] = 0.1,
-        sigma: Optional[float] = 1.0,
+        sigma: Optional[float] = None,
         *args,
         **kwargs
     ) -> None:
@@ -76,6 +76,36 @@ class KernelRidgeRegression(ABC):
         self.hash_gram = {}
         self._sigma = sigma
 
+    def fit_choleski(
+        self,
+        X: ndarray,
+        y: ndarray,
+    ) -> None:
+        """Method to fit the parameters of the model using analytic expression.
+        Args:
+            X: The training data.
+            y: The training labels associated to the trainning data.
+            kernel: The kernel function. Must be defined in the Child class.
+        """
+
+        # Get parameters
+        self.dataset['X'] = X
+        self.dataset['y'] = y
+
+        # Check existence of the Gram matrix of the dataset X in the self.hash,
+        # compute it if not already in self.hash
+        key = hash((X.tobytes(), X.tobytes()))
+        #print(self.hash_gram)
+        if not key in self.hash_gram:
+            self.hash_gram[key] = self.kernel(X, X)
+        self.K = self.hash_gram[key]
+
+        # Analytic solution for the parameters of the model (the loss function is just quadratic in alpha)
+        try:
+            self.alpha = solve(self.K + self._ridge_parameter * np.eye(X.shape[0]), y, assume_a='pos')
+        except (np.linalg.LinAlgError, ValueError, np.lina):
+            return
+
     def fit(
         self,
         X: np.ndarray,
@@ -118,36 +148,6 @@ class KernelRidgeRegression(ABC):
             # Updating the parameters
             self.alpha -= self.learning_rate * grad_alpha
 
-    def fit_choleski(
-        self,
-        X: ndarray,
-        y: ndarray,
-    ) -> None:
-        """Method to fit the parameters of the model using analytic expression.
-        Args:
-            X: The training data.
-            y: The training labels associated to the trainning data.
-            kernel: The kernel function. Must be defined in the Child class.
-        """
-
-        # Get parameters
-        self.dataset['X'] = X
-        self.dataset['y'] = y
-
-        # Check existence of the Gram matrix of the dataset X in the self.hash,
-        # compute it if not already in self.hash
-        key = hash((X.tobytes(), X.tobytes()))
-        #print(self.hash_gram)
-        if not key in self.hash_gram:
-            self.hash_gram[key] = self.kernel(X, X)
-        self.K = self.hash_gram[key]
-
-        # Analytic solution for the parameters of the model (the loss function is just quadratic in alpha)
-        try:
-            self.alpha = solve(self.K + self._ridge_parameter * np.eye(X.shape[0]), y, assume_a='pos')
-        except (np.linalg.LinAlgError, ValueError, np.lina):
-            return
-
     def predict(
         self,
         X: ndarray,
@@ -176,11 +176,11 @@ class KernelRidgeRegression(ABC):
     ) -> float:
         """Method to evaluate the model with a given loss function.
         Args:
-            X: The data to predict the labels.
-            y: The labels associated to the data.
-            loss: The loss function. Must be defined in the Child class.
+            X (np.ndarray): The data to predict the labels.
+            y (np.ndarray): The labels associated to the data.
+            loss (Callable[[ndarray, ndarray], ndarray]): The loss function. Must be defined in the Child class.
         Returns:
-            The loss value.
+            (float): The loss value.
         """
 
         y_predicted = self.predict(X)
@@ -189,8 +189,8 @@ class KernelRidgeRegression(ABC):
     @abstractmethod
     def kernel(
         self,
-        x1: ndarray,
-        x2: ndarray
+        X1: ndarray,
+        X2: ndarray
     ) -> ndarray:
 
         raise NotImplementedError

@@ -12,6 +12,7 @@
 
 import numpy as np
 
+
 # Loss functions
 def rmae(
     y_true: np.ndarray,
@@ -33,10 +34,3 @@ def rmse(
 ) -> np.ndarray:
 
     return 1 / y_true.shape[0] * np.sqrt(np.sum((y_true - y_predicted)**2))
-
-def percentage_mae(
-    y_true: np.ndarray,
-    y_predicted: np.ndarray,
-) -> np.ndarray:
-
-    return np.mean(np.abs(y_true - y_predicted) / (np.abs(y_true) + np.abs(y_predicted)))
