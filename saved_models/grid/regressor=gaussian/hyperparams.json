@@ -1,8 +1,8 @@
 {
-    "ridge_parameter": null,
-    "sigma": null,
-    "train_size": 1,
-    "val_size": 1,
+    "ridge_parameter": 0.01953256437086297,
+    "sigma": 64.0,
+    "train_size": 80,
+    "val_size": 20,
     "regressor_name": "gaussian",
-    "rmae": Infinity
+    "rmae": 0.06729568139596752
 }

@@ -94,6 +94,10 @@ def main(args) -> None:
 
     # Load the data
     X_train, y_train, X_val, y_val = load_data(image_size=args.image_size, dataset_size=args.dataset_size)
+    # Flatten the image for the Gaussian kernel regressor
+    if args.regressor == 'gaussian':
+        X_train = X_train.reshape(-1, args.image_size**2)
+        X_val = X_val.reshape(-1, args.image_size**2)
 
     # Instanciate the regressor and the grid
     SIGMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], variance_data=np.var(X_train))
@@ -103,7 +107,7 @@ def main(args) -> None:
     # Run the grid search
     print(save_directory)
     grid.fit(X_train, y_train, X_val, y_val)
-    #print(grid.theta, grid.evaluate_best_model())
+    print(grid.theta, grid.evaluate_best_model())
 
 if __name__ == '__main__':
 
