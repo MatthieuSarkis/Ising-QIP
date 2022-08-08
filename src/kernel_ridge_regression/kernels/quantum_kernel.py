@@ -10,6 +10,10 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+r"""
+Implementation of the Quantum Kernel Ridge Regression.
+"""
+
 import numpy as np
 from typing import Optional
 from qiskit import QuantumCircuit, QuantumRegister
@@ -23,12 +27,16 @@ from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import
 
 
 class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
+    r"""Class implementing the quantum kernel. The kernel can either be linear or exponential
+    depending on whether a value of sigma has been provided to the constructor or not.
+    """
 
     def __init__(
         self,
         *args,
         **kwargs,
-    ) ->None:
+    ) -> None:
+        r"""Constructor for the quantum kernel class."""
 
         super(Quantum_Kernel, self).__init__(*args, **kwargs)
         self.name = 'quantum_kernel'
@@ -40,7 +48,14 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         X2: np.ndarray,
         from_quantumstate: bool = False
     ) -> np.ndarray:
-        r"""Return the quantum Gram matrix
+        r""" Compute the Gaussian Kernel.
+        Args:
+            X1 (np.ndarray): First batch of 2d images.
+            X2 (np.ndarray): Second batch of 2d images.
+            from_quantumstate (bool): Whether of not to use preprocessed image data
+            which has already been mapped to a quantum state.
+        Returns:
+            (np.ndarray): Quantum Gram matrix associated to the two batches of data X1 and X2.
         """
 
         if from_quantumstate:
@@ -137,6 +152,12 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         self,
         image: np.ndarray
     ) -> QuantumCircuit:
+        r"""Associates a quantum circuit to an image. The output of the circuit is the encoded image.
+        Args:
+            image (np.mdarray): Single image whose quantum circuit representation one is computing.
+        Returns:
+            (QuantumCircuit): Quatum circuit representation of image.
+        """
 
         image_size = image.shape[0]
         side_qubits = ceil(log2(image_size))
@@ -210,7 +231,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         kernel: np.ndarray
     ) -> np.ndarray:
 
+
         if self.sigma is not None:
-            kernel = np.exp(- kernel / self.sigma**4)
+            kernel = np.exp(-self.gamma * kernel)
 
         return kernel

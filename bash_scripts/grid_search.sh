@@ -1,6 +1,14 @@
+#!/bin/bash
+# Purpose: Run a grid search with qpu over the hyperparameters
+# Usage: ./bash_scripts/grid_search.sh
+# Comment: The grid is defined by the cartesian product of
+# two lists of hyperparameters: RIDGE_PARAMETER and GAMMA,
+# that can be found and modified at will in
+# 'src/main/main_grid_search.py'
+
 IMAGE_SIZE=16
 DATASET_SIZE=100
-REGRESSOR='gaussian'
+REGRESSOR='quantum'
 
 BACKEND_TYPE="simulator"
 BACKEND_NAME="statevector_simulator"

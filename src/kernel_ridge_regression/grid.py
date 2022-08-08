@@ -10,6 +10,11 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+r"""
+Implementation of grid search algorithm for the kernel ridge regression.
+"""
+
+
 import os
 import itertools
 import json
@@ -27,10 +32,18 @@ class Grid():
         self,
         regressor: KernelRidgeRegression,
         ridge_parameter: List[float],
-        sigma: List[float],
+        gamma: List[float],
         save_directory: str,
         criterion: Callable[[np.ndarray, np.ndarray], np.ndarray] = rmae,
     ) -> None:
+        r"""Constructor for the Grid class.
+        Args:
+            regressor (KernelRidgeRegression): A regressor whose hyperparameters one is optimizing over.
+            ridge_parameter (List[float]): List of values for the ridge parameter.
+            gamma (List[float]): List of values for the width parameter gamma.
+            save_directory (str): directory where to save the optimized hyperparameters.
+            criterion (Callable[[np.ndarray, np.ndarray], np.ndarray]): loss function used.
+        """
 
         super(Grid, self).__init__()
         self.name = 'grid'
@@ -40,7 +53,7 @@ class Grid():
 
         self.hyperparameters_grid = self._prepare_grid(
             ridge_parameter=ridge_parameter,
-            sigma=sigma
+            gamma=gamma
         )
 
         self._theta: Dict[str, float] = None
@@ -61,7 +74,7 @@ class Grid():
 
         self._theta = {
             'ridge_parameter': None,
-            'sigma': None
+            'gamma': None
         }
 
         self.J: float = float('inf')
@@ -74,6 +87,14 @@ class Grid():
         y_val: np.ndarray,
         verbose: bool = False
     ) -> None:
+        r"""Method performing the grid search
+        Args:
+            X_train (np.ndarray): batch of train images.
+            y_train (np.ndarray): batch of train labels.
+            X_val (np.ndarray): batch of validation images.
+            y_val (np.ndarray): batch of train labels.
+            verbose (bool): output some progess message.
+        """
 
         self._initialize()
 
@@ -94,6 +115,12 @@ class Grid():
         theta: Dict[str, float],
         verbose: bool = False
     ) -> None:
+        r"""Fits the regressor for the given values of the hyperparameters and check
+        if there is improvement.
+        Args:
+            theta (Dict[str, float]): set of the values of the hyperparameters.
+            verbose (bool): output some progess message.
+        """
 
         X_train = self.dataset['X_train']
         y_train = self.dataset['y_train']
@@ -101,7 +128,7 @@ class Grid():
         y_val = self.dataset['y_val']
 
         self.regressor.ridge_parameter = theta['ridge_parameter']
-        self.regressor.sigma = theta['sigma']
+        self.regressor.gamma = theta['gamma']
 
         try:
             self.regressor.fit_choleski(X_train, y_train)
@@ -120,6 +147,10 @@ class Grid():
         self,
         save_directory: str = './saved_models',
     ) -> None:
+        r"""Dumps the optimal values of the hyperparameters to a file.
+        Args:
+            save_directory (str): directory where to save the optimized hyperparameters.
+        """
 
         assert self.theta is not None, "Call the fit method first!"
 
@@ -138,6 +169,7 @@ class Grid():
             json.dump(d, f, indent=4)
 
     def evaluate_best_model(self) -> float:
+        r"""Returns the validation loss corresponding to the best regressor."""
 
         assert self.J is not None, "Call the fit method first!"
         return self.J
@@ -168,21 +200,28 @@ class Grid():
     ) -> None:
 
         self._theta['ridge_parameter'] = theta['ridge_parameter']
-        self._theta['sigma'] = theta['sigma']
+        self._theta['gamma'] = theta['gamma']
 
     @staticmethod
     def _prepare_grid(
         ridge_parameter: List[float],
-        sigma: List[float],
+        gamma: List[float],
     ) -> List[Dict[str, float]]:
+        r"""Prepares the grid to search over.
+        Args:
+            ridge_parameter (List[float]): List of values for the ridge parameter.
+            gamma (List[float]): List of values for the width parameter gamma.
+        Returns:
+            (List[Dict[str, float]]): The hyperparameters grid.
+        """
 
         hyperparams_grid: List[Dict[str, float]] = []
 
-        for pair in itertools.product(ridge_parameter, sigma):
+        for pair in itertools.product(ridge_parameter, gamma):
 
             hyperparams_grid.append({
                 'ridge_parameter': pair[0],
-                'sigma': pair[1]
+                'gamma': pair[1]
             })
 
         return hyperparams_grid

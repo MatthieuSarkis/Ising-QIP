@@ -10,6 +10,11 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+r"""
+This class plays the role of a wrapper containing the information
+about the quantum backend used, and the information related to the
+job execution.
+"""
 
 from typing import Optional
 from qiskit import Aer
@@ -30,7 +35,18 @@ class QiskitKernel():
         project: Optional[str] = 'main',
         job_name: Optional[str] = 'ising_qip',
     ) -> None:
-        """ Initialize the Projected Kernel Ridge Regression from parent's init. """
+        r"""Initialize the Projected Kernel Ridge Regression from parent's init.
+        Args:
+            backend_type (Optional[str]): Whether to use a simulator or an IBMQ hardware.
+            backend_name (Optional[str]): Name of the backend.
+            mitigate (bool): Whether or not to use quantum error mitigation.
+            seed (Optional[int]): Seed for the pseudo-random number generators.
+            shots (Optional[int]): Number of shots for the quantum simulations.
+            hub (Optional[str]): Name of the hub on IBMQ.
+            group (Optional[str]): Name of the group on IBMQ.
+            project (Optional[str]): Name of the project on IBMQ.
+            job_name (Optional[str]): Name of the job on IBMQ.
+        """
 
         super(QiskitKernel, self).__init__()
 

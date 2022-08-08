@@ -57,16 +57,6 @@ def load_data(
 
     return X_train, y_train, X_test, y_test
 
-def make_grid(
-    feature_dim: int,
-    variance_data: float,
-) -> Tuple[List[float], List[float]]:
-
-    SIGMA = [2.0**k for k in range(5, 15)]
-    RIDGE_PARAMETER = map(lambda x: x / (feature_dim * variance_data), [0.5, 1.0, 3.0, 5.0, 20.0]) # careful with normalization, should go to the num in our convention (1/sigma^2 vs. gamma in scikit-learn)
-
-    return SIGMA, RIDGE_PARAMETER
-
 def instantiate_regressor(
     args,
     sigma: float,
@@ -114,23 +104,17 @@ def main(args) -> None:
         dataset_size=args.dataset_size
     )
 
-    # Instanciate the regressor and the grid
-    SIGMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], variance_data=np.var(X_train))
-    regressor = instantiate_regressor(args=args)
-
-    grid = Grid(
-        regressor=regressor,
-        ridge_parameter=RIDGE_PARAMETER,
-        sigma=SIGMA,
-        save_directory=save_directory
-    )
+    # Flatten the image for the Gaussian kernel regressor
+    if args.regressor == 'gaussian':
+        X_train = X_train.reshape(-1, args.image_size**2)
+        X_val = X_val.reshape(-1, args.image_size**2)
 
     with open(os.path.join(save_directory, 'hyperparams.json')) as f:
         hyperparams = json.load(f)
 
     regressor = instantiate_regressor(
         args=args,
-        sigma=hyperparams['sigma'],
+        gamma=hyperparams['gamma'],
         ridge_parameter=hyperparams['ridge_parameter']
     )
 

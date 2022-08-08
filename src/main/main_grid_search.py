@@ -10,10 +10,12 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+
 from argparse import ArgumentParser
 import os
 import glob
 import numpy as np
+from scipy.stats import moment
 import warnings
 warnings.filterwarnings("ignore")
 from typing import Tuple, List
@@ -57,14 +59,13 @@ def load_data(
 
 def make_grid(
     feature_dim: int,
-    variance_data: float,
+    scale: float,
 ) -> Tuple[List[float], List[float]]:
 
-    SIGMA = [2.0**k for k in range(5, 7)]
-    RIDGE_PARAMETER = map(lambda x: x / (feature_dim * variance_data), [0.5, 1.0, 3.0, 5.0, 20.0]) # careful with normalization, should go to the num in our convention (1/sigma^2 vs. gamma in scikit-learn)
-    #RIDGE_PARAMETER = map(lambda x: x / (feature_dim * variance_data), [0.5]) # careful with normalization, should go to the num in our convention (1/sigma^2 vs. gamma in scikit-learn)
+    GAMMA = map(lambda x: x / (feature_dim * scale), [2.0**k for k in range(-5, 15)]) # cf. (https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC)
+    RIDGE_PARAMETER = [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.025, 0.05, 0.1]
 
-    return SIGMA, RIDGE_PARAMETER
+    return GAMMA, RIDGE_PARAMETER
 
 def instantiate_regressor(args) -> KernelRidgeRegression:
 
@@ -100,14 +101,12 @@ def main(args) -> None:
         X_val = X_val.reshape(-1, args.image_size**2)
 
     # Instanciate the regressor and the grid
-    SIGMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], variance_data=np.var(X_train))
+    GAMMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], scale=moment(X_train, axis=None, moment=2 if args.regressor=='gaussian' else 4))
     regressor = instantiate_regressor(args=args)
-    grid = Grid(regressor=regressor, ridge_parameter=RIDGE_PARAMETER, sigma=SIGMA, save_directory=save_directory)
+    grid = Grid(regressor=regressor, ridge_parameter=RIDGE_PARAMETER, gamma=GAMMA, save_directory=save_directory)
 
     # Run the grid search
-    print(save_directory)
     grid.fit(X_train, y_train, X_val, y_val)
-    print(grid.theta, grid.evaluate_best_model())
 
 if __name__ == '__main__':
 

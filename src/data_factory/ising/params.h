@@ -21,13 +21,13 @@ float T_critical(int L) // In case one wants to use the finite size definition o
     return Tc / (1 + 5 / (4.0 * L));
 }
 
-int L = 4;
+int L = 16;
 int n_steps_initial = 1000;
 int n_steps_thermalize = 100;
 int n_steps_generation = 10;
-int n_data_per_temp = 1000;
-float T_min = 1.8;
-float T_max = 2.3;
+int n_data_per_temp = 2000;
+float T_min = 1.5;
+float T_max = 2.8;
 //float dT = 0.010;
 float dT = 0.100;
 bool binary = true;

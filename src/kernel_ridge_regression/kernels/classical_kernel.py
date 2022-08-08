@@ -10,7 +10,9 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-""" Implementation of the Gaussian Kernel Ridge Regression. """
+r"""
+Implementation of the Gaussian Kernel Ridge Regression.
+"""
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -32,18 +34,17 @@ class Gaussian(KernelRidgeRegression):
 
     def kernel(
         self,
-        x1: np.ndarray,
-        x2: np.ndarray,
+        X1: np.ndarray,
+        X2: np.ndarray,
     ) -> np.ndarray:
         r""" Compute the Gaussian Kernel.
         Args:
-            x1: A 1-D array data vector.
-            x2: A 1-D array data vector.
-            sigma: The standard deviation of the gaussian function.
+            X1 (np.ndarray): First batch of 1-D array data vector.
+            X2 (np.ndarray): Second batch of 1-D array data vector.
         Returns:
-            Th kernel matrix.
+            (np.ndarray): Gram matrix associated to the two batches of data X1 and X2.
         """
 
-        pairwise_distances = np.array(cdist(x1, x2, 'euclidean'))
-        K = np.exp(-pairwise_distances**2 / (2 * self.sigma**2))
+        pairwise_distances = np.array(cdist(X1, X2, 'euclidean'))
+        K = np.exp(-self.gamma * pairwise_distances**2)
         return np.array(K)

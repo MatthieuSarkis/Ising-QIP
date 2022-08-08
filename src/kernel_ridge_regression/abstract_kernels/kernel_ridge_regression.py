@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""
+r"""
 This module implements the abstract base class for kernel ridge regression.
 """
 
@@ -18,12 +18,11 @@ from abc import ABC, abstractmethod
 from typing import Optional, Callable
 
 import numpy as np
-from numpy import ndarray
 from scipy.linalg import solve
 from typing import Dict, Optional
 
 class KernelRidgeRegression(ABC):
-    """
+    r"""
     Base class for Kernel Ridge Regression.
     This method should initialize the module and use an exception if a component of the module is available.
     """
@@ -31,15 +30,15 @@ class KernelRidgeRegression(ABC):
     def __init__(
         self,
         ridge_parameter: Optional[float] = 0.1,
-        sigma: Optional[float] = None,
+        gamma: Optional[float] = None,
         *args,
         **kwargs
     ) -> None:
-        """
+        r"""
         Initialize the Kernel Ridge Regression.
         Args:
             ridge_parameter: The ridge parameter.
-            sigma: The sigma parameter.
+            gamma: The gamma parameter.
         """
 
         super().__init__(*args, **kwargs)
@@ -47,11 +46,11 @@ class KernelRidgeRegression(ABC):
         self.name: Optional[str] = None
 
         self.dataset: dict = {}
-        self.hash_gram: Dict[int, ndarray] = {}
+        self.hash_gram: Dict[int, np.ndarray] = {}
 
         # Model-related hyperparameters
         self._ridge_parameter = ridge_parameter
-        self._sigma = sigma
+        self._gamma = gamma
 
         # Parameters of the model
         self.alpha: Optional[np.ndarray] = None
@@ -66,26 +65,26 @@ class KernelRidgeRegression(ABC):
         self._ridge_parameter = ridge_parameter
 
     @property
-    def sigma(self) -> float:
-        return self._sigma
+    def gamma(self) -> float:
+        return self._gamma
 
-    @sigma.setter
-    def sigma(self, sigma):
+    @gamma.setter
+    def gamma(self, gamma):
 
-        # setting a new value of sigma means that we should recompute Gram matrices
+        # setting a new value of gamma means that we should recompute Gram matrices
         self.hash_gram = {}
-        self._sigma = sigma
+        self._gamma = gamma
 
     def fit_choleski(
         self,
-        X: ndarray,
-        y: ndarray,
+        X: np.ndarray,
+        y: np.ndarray,
     ) -> None:
-        """Method to fit the parameters of the model using analytic expression.
+        r"""Method to fit the parameters of the model using analytic expression.
         Args:
-            X: The training data.
-            y: The training labels associated to the trainning data.
-            kernel: The kernel function. Must be defined in the Child class.
+            X (np.ndarray): The training data.
+            y (np.ndarray): The training labels associated to the trainning data.
+            kernel (np.ndarray): The kernel function. Must be defined in the Child class.
         """
 
         # Get parameters
@@ -113,13 +112,12 @@ class KernelRidgeRegression(ABC):
         number_epochs: int = 50000,
         learning_rate: float = 1e-5,
     ) -> None:
-        """Method to fit the parameters of the model using gradient descent. If the dataset is small enough, the method fit_choleski is prefered.
+        r"""Method to fit the parameters of the model using gradient descent. If the dataset is small enough, the method fit_choleski is prefered.
         Args:
-            X: The training data.
-            y: The training labels associated to the trainning data.
-            kernel: The kernel function. Must be defined in the Child class.
-            number_epochs: The number of epochs.
-            learning_rate: The learning rate.
+            X (np.ndarray): The training data.
+            y (np.ndarray): The training labels associated to the trainning data.
+            number_epochs (int): The number of epochs.
+            learning_rate (float): The learning rate.
         """
 
         # Get parameters
@@ -150,14 +148,13 @@ class KernelRidgeRegression(ABC):
 
     def predict(
         self,
-        X: ndarray,
-    ) -> ndarray:
-        """ Method to predict the labels of given data.
+        X: np.ndarray,
+    ) -> np.ndarray:
+        r""" Method to predict the labels of given data.
         Args:
-            X: The data to predict the labels.
-            kernel: The kernel function. Must be defined in the Child class.
+            X (np.ndarray): The data to predict the labels.
         Returns:
-            The predicted labels.
+            (np.ndarray): The predicted labels.
         """
 
         key = hash((self.dataset['X'].tobytes(), X.tobytes()))
@@ -170,15 +167,15 @@ class KernelRidgeRegression(ABC):
 
     def evaluate(
         self,
-        X: ndarray,
-        y: ndarray,
-        loss: Callable[[ndarray, ndarray], ndarray]
+        X: np.ndarray,
+        y: np.ndarray,
+        loss: Callable[[np.ndarray, np.ndarray], np.ndarray]
     ) -> float:
-        """Method to evaluate the model with a given loss function.
+        r"""Method to evaluate the model with a given loss function.
         Args:
             X (np.ndarray): The data to predict the labels.
             y (np.ndarray): The labels associated to the data.
-            loss (Callable[[ndarray, ndarray], ndarray]): The loss function. Must be defined in the Child class.
+            loss (Callable[[np.ndarray, np.ndarray], np.ndarray]): The loss function. Must be defined in the Child class.
         Returns:
             (float): The loss value.
         """
@@ -189,8 +186,14 @@ class KernelRidgeRegression(ABC):
     @abstractmethod
     def kernel(
         self,
-        X1: ndarray,
-        X2: ndarray
-    ) -> ndarray:
+        X1: np.ndarray,
+        X2: np.ndarray
+    ) -> np.ndarray:
+        r"""Method to compute the Gram matrix corresponding to the two batches of data X1 and X2.
+        To be implemented by the children classes.
+        Args:
+            X1 (np.ndarray): First batch of data.
+            X2 (np.ndarray): Second batch of data.
+        """
 
         raise NotImplementedError
