@@ -24,6 +24,7 @@ class Test_Quantum_Kernel(unittest.TestCase):
         self.qk_lin = Quantum_Kernel(
             gamma=None,
             ridge_parameter=1.0,
+            memory_bound=None,
             backend_type='simulator',
             backend_name='statevector_simulator',
             mitigate=False,
@@ -38,6 +39,7 @@ class Test_Quantum_Kernel(unittest.TestCase):
         self.qk_exp = Quantum_Kernel(
             gamma=1.0,
             ridge_parameter=1.0,
+            memory_bound=None,
             backend_type='simulator',
             backend_name='statevector_simulator',
             mitigate=False,
@@ -65,14 +67,16 @@ class Test_Quantum_Kernel(unittest.TestCase):
             [1.0, 3.5],
             [2.2, 7.1]
         ])
+
         result_exp = np.array([
             [0.36787944, 0.03019738],
             [0.11080316, 0.0008251 ]
         ])
+
         result_lin = kernel
 
         self.assertIsNone(np.testing.assert_allclose(self.qk_exp._postprocess_kernel(kernel), result_exp, rtol=1e-5)) # it returns None if the arrays are equal.
-        self.assertIsNone(np.testing.assert_allclose(self.qk_lin._postprocess_kernel(kernel), result_lin)) # it returns None if the arrays are equal.
+        self.assertIsNone(np.testing.assert_allclose(self.qk_lin._postprocess_kernel(kernel), result_lin))
 
     def test_image_to_circuit(self) -> None:
 
@@ -86,10 +90,16 @@ class Test_Quantum_Kernel(unittest.TestCase):
         qc = self.qk_exp.image_to_circuit(image)
         result = self.qk_exp.qi.execute(circuits=qc, had_transpiled=False)
 
-        actual_result = result.get_statevector().data.astype('float32')
-        wanted_result = np.array([0.0, 0.25, 0.0, 0.25, 0.25, 0.0, 0.25, 0.0, 0.25, 0.0, 0.0,0.25, 0.25, 0.0, 0.0, 0.25, 0.25, 0.0, 0.0, 0.25, 0.25, 0.0,0.25, 0.0, 0.0, 0.25, 0.25, 0.0, 0.0, 0.25, 0.0, 0.25])
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            actual_result = result.get_statevector().data.astype('float32')
 
-        self.assertIsNone(np.testing.assert_allclose(actual_result, wanted_result, rtol=1e-7))
+        wanted_result = np.array([
+            0.0, 0.25, 0.0, 0.25, 0.25, 0.0, 0.25, 0.0, 0.25, 0.0, 0.0,
+            0.25, 0.25, 0.0, 0.0, 0.25, 0.25, 0.0, 0.0, 0.25, 0.25, 0.0,
+            0.25, 0.0, 0.0, 0.25, 0.25, 0.0, 0.0, 0.25, 0.0, 0.25
+        ])
 
         wanted_result2 = OrderedDict([
             ('h', 32),
@@ -103,6 +113,7 @@ class Test_Quantum_Kernel(unittest.TestCase):
             ('id', 1)
         ])
 
+        self.assertIsNone(np.testing.assert_allclose(actual_result, wanted_result, rtol=1e-7))
         self.assertDictEqual(qc.decompose().count_ops(), wanted_result2)
 
     def test_kernel(self) -> None:
@@ -129,13 +140,17 @@ class Test_Quantum_Kernel(unittest.TestCase):
              [ 1, -1, -1, -1],
              [ 1,  1,  1,  1]]], dtype=np.int8)
 
-        actual_result = self.qk_exp.kernel(X1, X2)
+        actual_result1 = self.qk_exp.kernel(X1, X2, from_quantumstate=False)
+        self.qk_exp.memory_bound = 1
+        actual_result2 = self.qk_exp.kernel(X1, X2, from_quantumstate=False)
+
         wanted_result = np.array([
             [0.90473525, 0.72876333],
             [0.72876333, 0.79979172]
         ])
 
-        self.assertIsNone(np.testing.assert_allclose(actual_result, wanted_result, rtol=1e-7))
+        self.assertIsNone(np.testing.assert_allclose(actual_result1, wanted_result, rtol=1e-7))
+        self.assertIsNone(np.testing.assert_allclose(actual_result2, wanted_result, rtol=1e-7))
 
 
 if __name__ == '__main__':
