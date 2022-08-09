@@ -28,7 +28,7 @@ from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import
 
 class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
     r"""Class implementing the quantum kernel. The kernel can either be linear or exponential
-    depending on whether a value of sigma has been provided to the constructor or not.
+    depending on whether a value of gamma has been provided to the constructor or not.
     """
 
     def __init__(
@@ -232,7 +232,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
     ) -> np.ndarray:
 
 
-        if self.sigma is not None:
+        if self.gamma is not None:
             kernel = np.exp(-self.gamma * kernel)
 
         return kernel

@@ -146,6 +146,7 @@ class KernelRidgeRegression(ABC):
             # Updating the parameters
             self.alpha -= self.learning_rate * grad_alpha
 
+
     def predict(
         self,
         X: np.ndarray,

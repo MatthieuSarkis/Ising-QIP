@@ -59,7 +59,7 @@ def load_data(
 
 def instantiate_regressor(
     args,
-    sigma: float,
+    gamma: float,
     ridge_parameter: float
 ) -> KernelRidgeRegression:
 
