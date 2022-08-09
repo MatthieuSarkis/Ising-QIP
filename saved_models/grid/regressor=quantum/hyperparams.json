@@ -1,9 +1,9 @@
 {
-    "ridge_parameter": null,
-    "gamma": null,
-    "train_size": 8,
-    "val_size": 2,
+    "ridge_parameter": 0.1,
+    "gamma": 0.0019493705181009915,
+    "train_size": 40,
+    "val_size": 10,
     "regressor_name": "quantum_kernel",
-    "rmae": Infinity,
-    "mitigate": true
+    "rmae": 0.15975930904729183,
+    "mitigate": false
 }

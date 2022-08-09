@@ -7,12 +7,13 @@
 # 'src/main/main_grid_search.py'
 
 IMAGE_SIZE=16
-DATASET_SIZE=100
-REGRESSOR='quantum'
+DATASET_SIZE=50
+REGRESSOR='gaussian'
+#REGRESSOR='quantum'
+MEMORY_BOUND=3
 
 BACKEND_TYPE="simulator"
 BACKEND_NAME="statevector_simulator"
-MITIGATE=False
 SEED=42
 SHOTS=1024
 HUB="ibm-q"
@@ -24,9 +25,10 @@ python src/main/main_grid_search.py \
     --image_size $IMAGE_SIZE \
     --dataset_size $DATASET_SIZE \
     --regressor $REGRESSOR \
+    --memory_bound $MEMORY_BOUND \
     --backend_type $BACKEND_TYPE \
     --backend_name $BACKEND_NAME \
-    --mitigate $MITIGATE \
+    --no-mitigate \
     --seed $SEED \
     --shots $SHOTS \
     --hub $HUB \

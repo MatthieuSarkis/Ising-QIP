@@ -21,6 +21,7 @@ from qiskit.result.counts import Counts
 from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit.result import Result
 from math import ceil, log2
+from typing import Dict
 
 from src.kernel_ridge_regression.abstract_kernels.qiskit_kernel import QiskitKernel
 from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
@@ -43,6 +44,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         self.name = 'quantum_kernel'
         self.num_qubits: Optional[int] = None
         self.memory_bound = memory_bound
+        self.hash_distance: Dict[int, np.ndarray] = {}
 
 
     def kernel(
@@ -61,119 +63,132 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
             (np.ndarray): Quantum Gram matrix associated to the two batches of data X1 and X2.
         """
 
-        N1 = X1.shape[0]
-        N2 = X2.shape[0]
-
-        # In case the batches of data are not too large (i.e. do not exceed the self.memory_bound attribute)
-        # one computes the Gram matrix entirely.
-        if (self.memory_bound is None) or (N1 <= self.memory_bound and N2 <= self.memory_bound):
-
-            if from_quantumstate:
-                gram = np.einsum('ab,cb->ac', X1, X2)
-
-            else:
-                num_qubits = 2 * ceil(log2(X1.shape[-1])) + 1
-
-                bounds1 = []
-                for i in range(X1.shape[0]):
-                    q = self.image_to_circuit(image=X1[i])
-                    bounds1.append(q)
-
-                bounds2 = []
-                for i in range(X2.shape[0]):
-                    q = self.image_to_circuit(image=X2[i])
-                    bounds2.append(q)
-
-                circuits = []
-                for c1 in bounds1:
-                    for c2 in bounds2:
-                        c = c2.compose(c1.inverse())
-                        if self._backend_type == 'IBMQ':
-                            c = c.measure_all(inplace=False)
-                        circuits.append(c)
-
-                #qc = transpile(circuits, self._backend)
-
-                if self._backend_type == 'IBMQ':
-
-                    if self.mitigate:
-                        qr = QuantumRegister(self.n_qubits)
-                        meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
-                        #cal_qc = transpile(meas_calibs, self.qi.backend)
-                        #qc = cal_qc + qc
-                        qc = meas_calibs + qc
-
-                        results = self.qi.execute(circuits=qc, had_transpiled=False)
-
-                        # Split the results into to Result objects for calibration and kernel computation
-                        cal_res = Result(backend_name= results.backend_name,
-                            backend_version= results.backend_version,
-                            qobj_id= results.qobj_id,
-                            job_id= results.job_id,
-                            success= results.success,
-                            #results = results.results[:len(cal_qc)]
-                            results = results.results[:len(meas_calibs)]
-                        )
-
-                        data_res = Result(backend_name= results.backend_name,
-                            backend_version= results.backend_version,
-                            qobj_id= results.qobj_id,
-                            job_id= results.job_id,
-                            success= results.success,
-                            #results = results.results[len(cal_qc):]
-                            results = results.results[len(meas_calibs):]
-                        )
-
-                        # Apply measurement calibration and computer the calibration filter
-                        meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
-
-                        # Apply the calibration filter to the results and get the counts
-                        mitigated_results = meas_filter.apply(data_res)
-                        self.counts = mitigated_results.get_counts()
-
-                    else:
-                        #result = self.qi.execute(circuits=qc, had_transpiled=True)
-                        result = self.qi.execute(circuits=circuits, had_transpiled=False)
-                        counts = result.get_counts()
-
-                    # Handle the case of a batch containing a single image
-                    if type(counts) == Counts:
-                        counts = [counts]
-
-                    gram = [count[num_qubits*'0'] / self.shots for count in counts]
-                    gram = np.array(gram)
-
-                else:
-                    computational_basis_vector = np.zeros(shape=(2**num_qubits,))
-                    computational_basis_vector[0] = 1
-                    #result = self.qi.execute(circuits=qc, had_transpiled=True)
-                    result = self.qi.execute(circuits=circuits, had_transpiled=False)
-                    statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
-                    statevector = np.stack(statevector)
-                    gram = np.einsum('a,ba->b', computational_basis_vector, statevector)**2 # One has to square the amplitudes to get the probabilities
-
-                gram = gram.reshape((X1.shape[0], X2.shape[0]))
-
+        key = hash((X1.tobytes(), X2.tobytes()))
+        if key in self.hash_distance:
+            gram = self.hash_distance[key]
             gram = np.absolute(gram)**2 # modulus square |<psi1|psi2>|^2
             gram = self._postprocess_kernel(gram)
+            print(gram)
             return gram
 
-        # In case the batches of data exceed the bound allowed by the RAM (specified by self.memory_bound),
-        # split the batches into smaller batches.
         else:
 
-            gram = np.zeros(shape=(N1, N2))
+            N1 = X1.shape[0]
+            N2 = X2.shape[0]
 
-            for i in range(0, N1, self.memory_bound):
-                for j in range(0, N2, self.memory_bound):
+            # In case the batches of data are not too large (i.e. do not exceed the self.memory_bound attribute)
+            # one computes the Gram matrix entirely.
+            if (self.memory_bound is None) or (N1 <= self.memory_bound and N2 <= self.memory_bound):
 
-                    X1_temp = X1[i:i+self.memory_bound]
-                    X2_temp = X2[j:j+self.memory_bound]
-                    n1 = X1_temp.shape[0]
-                    n2 = X2_temp.shape[0]
-                    gram[i:i+n1, j:j+n2] = self.kernel(X1_temp, X2_temp)
+                if from_quantumstate:
+                    gram = np.einsum('ab,cb->ac', X1, X2)
 
-            return gram
+                else:
+                    num_qubits = 2 * ceil(log2(X1.shape[-1])) + 1
+
+                    bounds1 = []
+                    for i in range(X1.shape[0]):
+                        q = self.image_to_circuit(image=X1[i])
+                        bounds1.append(q)
+
+                    bounds2 = []
+                    for i in range(X2.shape[0]):
+                        q = self.image_to_circuit(image=X2[i])
+                        bounds2.append(q)
+
+                    circuits = []
+                    for c1 in bounds1:
+                        for c2 in bounds2:
+                            c = c2.compose(c1.inverse())
+                            if self._backend_type == 'IBMQ':
+                                c = c.measure_all(inplace=False)
+                            circuits.append(c)
+
+                    #qc = transpile(circuits, self._backend)
+
+                    if self._backend_type == 'IBMQ':
+
+                        if self.mitigate:
+                            qr = QuantumRegister(self.n_qubits)
+                            meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
+                            #cal_qc = transpile(meas_calibs, self.qi.backend)
+                            #qc = cal_qc + qc
+                            qc = meas_calibs + qc
+
+                            results = self.qi.execute(circuits=qc, had_transpiled=False)
+
+                            # Split the results into to Result objects for calibration and kernel computation
+                            cal_res = Result(backend_name= results.backend_name,
+                                backend_version= results.backend_version,
+                                qobj_id= results.qobj_id,
+                                job_id= results.job_id,
+                                success= results.success,
+                                #results = results.results[:len(cal_qc)]
+                                results = results.results[:len(meas_calibs)]
+                            )
+
+                            data_res = Result(backend_name= results.backend_name,
+                                backend_version= results.backend_version,
+                                qobj_id= results.qobj_id,
+                                job_id= results.job_id,
+                                success= results.success,
+                                #results = results.results[len(cal_qc):]
+                                results = results.results[len(meas_calibs):]
+                            )
+
+                            # Apply measurement calibration and computer the calibration filter
+                            meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
+
+                            # Apply the calibration filter to the results and get the counts
+                            mitigated_results = meas_filter.apply(data_res)
+                            self.counts = mitigated_results.get_counts()
+
+                        else:
+                            #result = self.qi.execute(circuits=qc, had_transpiled=True)
+                            result = self.qi.execute(circuits=circuits, had_transpiled=False)
+                            counts = result.get_counts()
+
+                        # Handle the case of a batch containing a single image
+                        if type(counts) == Counts:
+                            counts = [counts]
+
+                        gram = [count[num_qubits*'0'] / self.shots for count in counts]
+                        gram = np.array(gram)
+
+                    else:
+                        computational_basis_vector = np.zeros(shape=(2**num_qubits,))
+                        computational_basis_vector[0] = 1
+                        #result = self.qi.execute(circuits=qc, had_transpiled=True)
+                        result = self.qi.execute(circuits=circuits, had_transpiled=False)
+                        statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
+                        statevector = np.stack(statevector)
+                        gram = np.einsum('a,ba->b', computational_basis_vector, statevector)**2 # One has to square the amplitudes to get the probabilities
+
+                    gram = gram.reshape((X1.shape[0], X2.shape[0]))
+
+                self.hash_distance[key] = gram
+                gram = np.absolute(gram)**2 # modulus square |<psi1|psi2>|^2
+                gram = self._postprocess_kernel(gram)
+                return gram
+
+            # In case the batches of data exceed the bound allowed by the RAM (specified by self.memory_bound),
+            # split the batches into smaller batches.
+            else:
+
+                gram = np.zeros(shape=(N1, N2))
+
+                for i in range(0, N1, self.memory_bound):
+                    for j in range(0, N2, self.memory_bound):
+
+                        print((i, j))
+
+                        X1_temp = X1[i:i+self.memory_bound]
+                        X2_temp = X2[j:j+self.memory_bound]
+                        n1 = X1_temp.shape[0]
+                        n2 = X2_temp.shape[0]
+                        gram[i:i+n1, j:j+n2] = self.kernel(X1_temp, X2_temp)
+
+                return gram
 
 
     def image_to_circuit(
@@ -261,6 +276,6 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
 
         if self.gamma is not None:
-            kernel = np.exp(-self.gamma * kernel)
+            kernel = np.exp(-2 * self.gamma * (1 - kernel))
 
         return kernel

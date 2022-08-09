@@ -68,15 +68,15 @@ class Test_Quantum_Kernel(unittest.TestCase):
             [2.2, 7.1]
         ])
 
-        result_exp = np.array([
-            [0.36787944, 0.03019738],
-            [0.11080316, 0.0008251 ]
+        wanted_result_exp = np.array([
+            [1.00000000e+00, 1.48413159e+02],
+            [1.10231764e+01, 1.98789151e+05]
         ])
 
-        result_lin = kernel
+        wanted_result_lin = kernel
 
-        self.assertIsNone(np.testing.assert_allclose(self.qk_exp._postprocess_kernel(kernel), result_exp, rtol=1e-5)) # it returns None if the arrays are equal.
-        self.assertIsNone(np.testing.assert_allclose(self.qk_lin._postprocess_kernel(kernel), result_lin))
+        self.assertIsNone(np.testing.assert_allclose(self.qk_exp._postprocess_kernel(kernel), wanted_result_exp, rtol=1e-5)) # it returns None if the arrays are equal.
+        self.assertIsNone(np.testing.assert_allclose(self.qk_lin._postprocess_kernel(kernel), wanted_result_lin))
 
     def test_image_to_circuit(self) -> None:
 
@@ -145,8 +145,8 @@ class Test_Quantum_Kernel(unittest.TestCase):
         actual_result2 = self.qk_exp.kernel(X1, X2, from_quantumstate=False)
 
         wanted_result = np.array([
-            [0.90473525, 0.72876333],
-            [0.72876333, 0.79979172]
+            [0.16533622, 0.25482264],
+            [0.25482264, 0.21157153]
         ])
 
         self.assertIsNone(np.testing.assert_allclose(actual_result1, wanted_result, rtol=1e-7))

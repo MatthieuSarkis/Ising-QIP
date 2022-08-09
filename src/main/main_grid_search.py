@@ -74,6 +74,7 @@ def instantiate_regressor(args) -> KernelRidgeRegression:
 
     elif args.regressor == 'quantum':
         regressor = Quantum_Kernel(
+            memory_bound=args.memory_bound,
             backend_type=args.backend_type,
             backend_name=args.backend_name,
             mitigate=args.mitigate,
@@ -116,11 +117,14 @@ if __name__ == '__main__':
     parser.add_argument("--image_size", type=int, default=16)
     parser.add_argument("--dataset_size", type=int, default=100)
     parser.add_argument("--regressor", type=str, default='gaussian', choices=['gaussian', 'quantum'])
+    parser.add_argument("--memory_bound", type=int)
 
     # Qiskit parameters
     parser.add_argument("--backend_type", type=str, default="simulator")
     parser.add_argument("--backend_name", type=str, default="statevector_simulator")
-    parser.add_argument("--mitigate", type=bool, default=False)
+    parser.add_argument('--mitigate', dest='mitigate', action='store_true')
+    parser.add_argument('--no-mitigate', dest='mitigate', action='store_false')
+    parser.set_defaults(set_mitigate=False)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--shots", type=int)
     parser.add_argument("--hub", type=str, default="ibm-q")

@@ -1,8 +1,8 @@
 {
-    "ridge_parameter": 0.025,
-    "gamma": 0.007812553799051483,
-    "train_size": 5600,
-    "val_size": 1400,
+    "ridge_parameter": 0.1,
+    "gamma": 0.0001221852013789669,
+    "train_size": 40,
+    "val_size": 10,
     "regressor_name": "gaussian",
-    "rmae": 0.1566492967729976
+    "rmae": 0.17654960138826295
 }
