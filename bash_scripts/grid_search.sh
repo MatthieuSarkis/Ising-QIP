@@ -7,9 +7,9 @@
 # 'src/main/main_grid_search.py'
 
 IMAGE_SIZE=16
-DATASET_SIZE=50
-REGRESSOR='gaussian'
-#REGRESSOR='quantum'
+DATASET_SIZE=10
+#REGRESSOR='gaussian'
+REGRESSOR='quantum'
 MEMORY_BOUND=3
 
 BACKEND_TYPE="simulator"

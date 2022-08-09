@@ -71,8 +71,6 @@ class KernelRidgeRegression(ABC):
     @gamma.setter
     def gamma(self, gamma):
 
-        # setting a new value of gamma means that we should recompute Gram matrices
-        self.hash_gram = {}
         self._gamma = gamma
 
     def fit_choleski(
@@ -92,9 +90,8 @@ class KernelRidgeRegression(ABC):
         self.dataset['y'] = y
 
         # Check existence of the Gram matrix of the dataset X in the self.hash,
-        # compute it if not already in self.hash
-        key = hash((X.tobytes(), X.tobytes()))
-        #print(self.hash_gram)
+        # compute it if not already in self.hash_gram
+        key = str(hash((X.tobytes(), X.tobytes(), self.gamma)))
         if not key in self.hash_gram:
             self.hash_gram[key] = self.kernel(X, X)
         self.K = self.hash_gram[key]
@@ -128,7 +125,7 @@ class KernelRidgeRegression(ABC):
 
         # Check existence of the Gram matrix of the dataset X in the self.hash,
         # compute it if not already in self.hash
-        key = hash((X.tobytes(), X.tobytes()))
+        key = hash((X.tobytes(), X.tobytes(), self.gamma))
         if not key in self.hash_gram:
             self.hash_gram[key] = self.kernel(X, X)
         self.K = self.hash_gram[key]
