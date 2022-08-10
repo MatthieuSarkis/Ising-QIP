@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis).
+# Written by Matthieu Sarkis (https://github.com/MatthieuSarkis)
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
