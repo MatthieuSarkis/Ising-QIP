@@ -8,6 +8,10 @@ build/
 dist/
 paper/
 
+saved_models/
+notebooks/
+bash_scripts/
+
 *.aux
 *.bbl
 *.blg
