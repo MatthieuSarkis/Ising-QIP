@@ -8,6 +8,7 @@ build/
 dist/
 paper/
 
+data/
 saved_models/
 notebooks/
 bash_scripts/
