@@ -48,7 +48,7 @@ More precisely, we wish to compare the relative performance of Kernel Ridge Regr
 
 Massaging a little bit the definition of the quantum kernel, using the definition of the Frobenius norm and the fact that the states are normalized, we can rewrite it as $k_\text{q}(x, y)=\exp\left[-2\gamma\left(1-\langle\psi(x)|\psi(y)\rangle^2\right)\right]$.
 
-The quantum linear kernel $\langle\psi(x)|\psi(y)\rangle=\langle0|\mathcal U^\dagger(x)\mathcal U(y)|0\rangle$ can be estimated with the following procedure: evolve the initial state $|0\rangle^{\otimes n}$ through the unitary gate $\mathcal U^\dagger(x)\mathcal U(y)$, measure the resulting state in the computational basis a certain number of shots, and count the fraction of times the bitstring '$\underbrace{0\dots 0}_{\text{n times}}$' appears. The quantum kernel $k_\text{q}(x, y)$ is then computed by classical postprocessing of the obtained linear quantum kernel.
+The quantum linear kernel $\langle\psi(x)|\psi(y)\rangle=\langle0|\mathcal U^\dagger(x)\mathcal U(y)|0\rangle$ can be estimated with the following procedure: evolve the initial state $|0\rangle^{\otimes n}$ through the unitary gate $\mathcal U^\dagger(x)\mathcal U(y)$, measure the resulting state in the computational basis a certain number of shots, and count the fraction of times the bitstring '$`\underbrace{0\dots 0}_{\text{n times}}`$' appears. The quantum kernel $k_\text{q}(x, y)$ is then computed by classical postprocessing of the obtained linear quantum kernel.
 
 
 ## Usage
