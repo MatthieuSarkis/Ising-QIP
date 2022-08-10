@@ -28,7 +28,7 @@ The idea is to encode an Ising configurations in a quantum state, in an economic
 Let us denote by $L$ the size of the square lattice. Let us denote q :=$\lceil\log_2L\rceil$. The number of required qubits in the quantum embedding discussed here is $n:=2q+1$, corresponding to $q$ qubits for the horizontal location, $q$ qubits for the vertical location, and $1$ 'spin qubit' containing the information on the binary value of the spin at a given location.
 
 Initially the state $|0\rangle^{\otimes n}$ is acted upon by $I\otimes H^{2q}$, where $H$ is the Hadamard gate, in order to produce a fully entangled state, with the spin qubit untouched. One obtains the following state:
-$|0\rangle\otimes\sum_{i=0}^{2^{2q}-1}|i\rangle$. Remains to implement a flip gate on the spin qubit whenever the spin at the location specific location if $+1$, and leave it untouched when the corresponding spin it $-1$. This is implemented by a controlled $X$ gate. The quantum circuit corresponding to the above Ising configuration is for instance given by:
+$|0\rangle\otimes\sum_{i=0,\dots,2^{2q}-1}|i\rangle$. Remains to implement a flip gate on the spin qubit whenever the spin at the location specific location if $+1$, and leave it untouched when the corresponding spin it $-1$. This is implemented by a controlled $X$ gate. The quantum circuit corresponding to the above Ising configuration is for instance given by:
 
 ![Circuit](./assets/circuit.png "Circuit")
 
