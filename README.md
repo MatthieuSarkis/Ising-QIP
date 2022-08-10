@@ -1,6 +1,6 @@
 # Ising Quantum Image Processing
 
-This repository contains a toy project in which we tackle the question of whether quantum embeddings can be any useful solving various tasks on classical spin system (like the Ising model, percolation, etc...).
+This repository contains a toy project in which we tackle the question of whether quantum embeddings can be any useful for solving various tasks on classical spin systems (like the Ising model, percolation, etc...).
 
 The data generation part for the Ising configurations is written in C++ and uses the Metropolis-Hastings algorithm.
 
@@ -30,7 +30,7 @@ Here is $4\times 4$ lattice representing a configuration of the Ising model.
 
 ![4*4 Ising configuration](./assets/ising.png "4*4 Ising configuration")
 
-The idea is to encode an Ising configurations in a quantum state, in an economical way in terms of the number of required qubits.
+The idea is to encode an Ising configuration in a quantum state, in an economical way in terms of the number of required qubits.
 Let us denote by $L$ the size of the square lattice. Let us denote q :=$\lceil\log_2L\rceil$. The number of required qubits in the quantum embedding discussed here is $n:=2q+1$, corresponding to $q$ qubits for the horizontal location, $q$ qubits for the vertical location, and $1$ 'spin qubit' containing the information on the binary value of the spin at a given location.
 
 Initially the state $|0\rangle^{\otimes n}$ is acted upon by $I\otimes H^{2q}$, where $H$ is the Hadamard gate, in order to produce a fully entangled state, with the spin qubit untouched. One obtains the following state:
@@ -51,7 +51,9 @@ Massaging a little bit the definition of the quantum kernel, using the definitio
 The quantum linear kernel $\langle\psi(x)|\psi(y)\rangle=\langle0|\mathcal U^\dagger(x)\mathcal U(y)|0\rangle$ can be estimated with the following procedure: evolve the initial state $|0\rangle^{\otimes n}$ through the unitary gate $\mathcal U^\dagger(x)\mathcal U(y)$, measure the resulting state in the computational basis a certain number of shots, and count the fraction of times the bitstring '$\underbrace{0\dots 0}_{\text{n times}}$' appears. The quantum kernel $k_\text{q}(x, y)$ is then computed by classical postprocessing of the obtained linear quantum kernel.
 
 
-## Data preparation
+## Usage
+
+### Data preparation
 
 Modify src/data_factory/ising/params.h as needed, then compile and run as follows:
 
@@ -60,9 +62,7 @@ g++ src/data_factory/ising/main.cpp -std=c++17 -O3 -o src/data_factory/ising/isi
 ./src/data_factory/ising/ising
 ```
 
-## Kernel Ridge Regression
-
-### Classical kernel
+### Grid search for Kernel Ridge Regression with classical kernel
 
 ```shell
 python src/main/main_grid_search.py \
@@ -71,7 +71,7 @@ python src/main/main_grid_search.py \
     --regressor gaussian
 ```
 
-### Quantum kernel
+### Grid search for Kernel Ridge Regression with quantum kernel
 
 ```shell
 python src/main/main_grid_search.py \
