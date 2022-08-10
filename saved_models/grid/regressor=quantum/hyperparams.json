@@ -1,9 +1,0 @@
-{
-    "ridge_parameter": 0.1,
-    "gamma": 0.001,
-    "train_size": 8,
-    "val_size": 2,
-    "regressor_name": "quantum_kernel",
-    "rmae": 0.07584193865472416,
-    "mitigate": false
-}
