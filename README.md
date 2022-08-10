@@ -38,7 +38,7 @@ $|0\rangle\otimes\sum_{i=0,\dots,2^{2q}-1}|i\rangle$. Remains to implement a fli
 
 ![Circuit](./assets/circuit.png "Circuit")
 
-From the quantum circuit, on can then extract a state vector from measurement statistics. Let us denote by $x$ some spin configuration in the dataset. One therefore associates to it a pure $|\psi(x)\rangle=\mathcal U(x)|0\rangle^{\otimes n}$, or alternatively the rank-$1$ density matrix $\rho(x)=|\psi(x)\rangle\langle\psi(x)|$.
+From the quantum circuit, on can then extract a state vector from measurement statistics. Let us denote by $x$ some spin configuration in the dataset. One therefore associates to it a pure $|\psi(x)\rangle=\mathcal U(x)|0\rangle^{\otimes n}$, or alternatively the rank-1 density matrix $\rho(x)=|\psi(x)\rangle\langle\psi(x)|$.
 
 ### Kernel Ridge Regression and quantum kernel estimation
 
