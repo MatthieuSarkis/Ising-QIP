@@ -1,5 +1,11 @@
 # Ising Quantum Image Processing
 
+This repository contains a toy project in which we tackle the question of whether quantum embeddings can be any useful solving various tasks on classical spin system (like the Ising model, percolation, etc...).
+
+The data generation part for the Ising configurations is written in C++ and uses the Metropolis-Hastings algorithm.
+
+The quantum embedding and quantum kernel estimation is written in python and leverages on IBM's qiskit library.
+
 ## Requirements
 
 * c++17
@@ -28,11 +34,11 @@ The idea is to encode an Ising configurations in a quantum state, in an economic
 Let us denote by $L$ the size of the square lattice. Let us denote q :=$\lceil\log_2L\rceil$. The number of required qubits in the quantum embedding discussed here is $n:=2q+1$, corresponding to $q$ qubits for the horizontal location, $q$ qubits for the vertical location, and $1$ 'spin qubit' containing the information on the binary value of the spin at a given location.
 
 Initially the state $|0\rangle^{\otimes n}$ is acted upon by $I\otimes H^{2q}$, where $H$ is the Hadamard gate, in order to produce a fully entangled state, with the spin qubit untouched. One obtains the following state:
-$|0\rangle\otimes\sum_{i=0}^{2^{2q}-1}|i\rangle$. Remains to implement a flip gate on the spin qubit whenever the spin at the location specific location if $+1$, and leave it untouched when the corresponding spin it $-1$. This is implemented by a controlled $X$ gate. The quantum circuit corresponding to the above Ising configuration is for instance given by:
+$|0\rangle\otimes\sum_{i=0,\dots,2^{2q}-1}|i\rangle$. Remains to implement a flip gate on the spin qubit whenever the spin at the location specific location if $+1$, and leave it untouched when the corresponding spin it $-1$. This is implemented by a controlled $X$ gate. The quantum circuit corresponding to the above Ising configuration is for instance given by:
 
 ![Circuit](./assets/circuit.png "Circuit")
 
-From the quantum circuit, on can then extract a state vector from measurement statistics. Let us denote by $x$ some spin configuration in the dataset. One therefore associates to it a pure $|\psi(x)\rangle$, or alternatively the rank-$1$ density matrix $\rho(x)=|\psi(x)\rangle\langle\psi(x)|$.
+From the quantum circuit, on can then extract a state vector from measurement statistics. Let us denote by $x$ some spin configuration in the dataset. One therefore associates to it a pure $|\psi(x)\rangle=\mathcal U(x)|0\rangle^{\otimes n}$, or alternatively the rank-$1$ density matrix $\rho(x)=|\psi(x)\rangle\langle\psi(x)|$.
 
 ### Kernel Ridge Regression and quantum kernel estimation
 
@@ -42,7 +48,8 @@ More precisely, we wish to compare the relative performance of Kernel Ridge Regr
 
 Massaging a little bit the definition of the quantum kernel, using the definition of the Frobenius norm and the fact that the states are normalized, we can rewrite it as $k_\text{q}(x, y)=\exp\left[-2\gamma\left(1-\langle\psi(x)|\psi(y)\rangle^2\right)\right]$.
 
-__...quantum kernel estimation...__
+The quantum linear kernel $\langle\psi(x)|\psi(y)\rangle=\langle0|\mathcal U^\dagger(x)\mathcal U(y)|0\rangle$ can be estimated with the following procedure: evolve the initial state $|0\rangle^{\otimes n}$ through the unitary gate $\mathcal U^\dagger(x)\mathcal U(y)$, measure the resulting state in the computational basis a certain number of shots, and count the fraction of times the bitstring '$\underbrace{0\dots 0}_{\text{n times}}$' appears. The quantum kernel $k_\text{q}(x, y)$ is then computed by classical postprocessing of the obtained linear quantum kernel.
+
 
 ## Data preparation
 
