@@ -62,9 +62,9 @@ class QiskitKernel():
 
         self._backend = None
         self.qi: Optional[QuantumInstance] = None
-        self.get_quantum_instance()
+        self.__get_quantum_instance()
 
-    def get_quantum_instance(self) -> None:
+    def __get_quantum_instance(self) -> None:
         """ Get the quantum instance for quamtum experiment. """
 
         if self._backend_type == "GPU":

@@ -15,17 +15,19 @@ This module implements the abstract base class for kernel ridge regression.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Callable
-
 import numpy as np
 from scipy.linalg import solve
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
+from tqdm import tqdm
 
 class KernelRidgeRegression(ABC):
-    r"""
-    Base class for Kernel Ridge Regression.
-    This method should initialize the module and use an exception if a component of the module is available.
+    r"""Base class for Kernel Ridge Regression.
+    This class implements three different fitting method:
+    1) Analytic solution using Choleski decomposition
+    2) Gradient descent
+    3) AutoKer method: fits both the parameters AND the hyperparameters using gradient descent.
     """
+
     @abstractmethod
     def __init__(
         self,
@@ -47,10 +49,11 @@ class KernelRidgeRegression(ABC):
 
         self.dataset: dict = {}
         self.hash_gram: Dict[int, np.ndarray] = {}
+        self.hash_distances_squared: Dict[int, np.ndarray] = {}
 
         # Model-related hyperparameters
-        self._ridge_parameter = ridge_parameter
-        self._gamma = gamma
+        self._ridge_parameter: Optional[float] = ridge_parameter
+        self._gamma: Optional[float] = gamma
 
         # Parameters of the model
         self.alpha: Optional[np.ndarray] = None
@@ -120,8 +123,6 @@ class KernelRidgeRegression(ABC):
         # Get parameters
         self.dataset['X'] = X
         self.dataset['y'] = y
-        self.number_epochs = number_epochs
-        self.learning_rate = learning_rate
 
         # Check existence of the Gram matrix of the dataset X in the self.hash,
         # compute it if not already in self.hash
@@ -134,15 +135,66 @@ class KernelRidgeRegression(ABC):
         self.alpha = np.zeros(X.shape[0])
 
         # Entering in the training loop
-        for _ in range(self.number_epochs):
+        for _ in range(number_epochs):
             y_predicted = self.K.dot(self.alpha)
 
             # Kernelized loss function with Ridge regularization
             grad_alpha = 2 * self.K.dot(y_predicted - y) + 2 * self.ridge_parameter * y_predicted
 
             # Updating the parameters
-            self.alpha -= self.learning_rate * grad_alpha
+            self.alpha -= learning_rate * grad_alpha
 
+    def fit_autoker(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        number_epochs: int = 100,
+        learning_rate_alpha: float = 1e-4,
+        learning_rate_gamma: float = 1e-5,
+        learning_rate_ridge_parameter: float = 1e-5,
+    ) -> None:
+        """Method to fit the parameters of the model using gradient descent.
+        Args:
+            X (np.ndarray): The training data.
+            y (np.ndarray): The training labels associated to the trainning data.
+            number_epochs (int): The number of epochs.
+        """
+
+        # Get parameters
+        self.dataset['X'] = X
+
+        # What we mean by 'distances_squared' here depends on the specific kernel we are looking at.
+        # In the classical case it is just the matrix of Euclidean distances squared ||x_1 - x_2||^2.
+        # In the quantum case it is ||\rho(x_1) - \rho(x_2)||_F^2 = 2 (1-|<psi_1|psi_2>|^2).
+        key = str(hash((X.tobytes(), X.tobytes())))
+        if not key in self.hash_distances_squared:
+            self.hash_distances_squared[key] = self.distances_squared(X, X)
+        distances_squared = self.hash_distances_squared[key]
+
+        # Initialization of the parameters
+        self.alpha = np.zeros(X.shape[0])
+        self.ridge_parameter = 1.0
+        self.gamma = 1.0 / (X.var() * X.shape[1])
+
+        # Entering in the training loop
+        for i in tqdm(range(number_epochs)):
+
+            print(i)
+
+            K = np.exp(-self.gamma * distances_squared)
+            dK = -distances_squared * K
+
+            y_predicted = K @ self.alpha
+
+            grad_alpha = 2 * K @ (y_predicted - y) + 2 * self.ridge_parameter * y_predicted
+            grad_gamma = (2 * (y_predicted - y) + self.ridge_parameter * self.alpha).T @ dK @ self.alpha
+            grad_ridge_parameter = self.alpha.T @ K @ self.alpha
+
+            self.alpha -= learning_rate_alpha * grad_alpha
+            self.gamma -= learning_rate_gamma * grad_gamma
+            self.ridge_parameter -= learning_rate_ridge_parameter * grad_ridge_parameter
+
+            print(self.gamma)
 
     def predict(
         self,
@@ -185,13 +237,33 @@ class KernelRidgeRegression(ABC):
     def kernel(
         self,
         X1: np.ndarray,
-        X2: np.ndarray
+        X2: np.ndarray,
+        *args,
+        **kwargs
     ) -> np.ndarray:
         r"""Method to compute the Gram matrix corresponding to the two batches of data X1 and X2.
         To be implemented by the children classes.
         Args:
             X1 (np.ndarray): First batch of data.
             X2 (np.ndarray): Second batch of data.
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def distances_squared(
+        self,
+        X1: np.ndarray,
+        X2: np.ndarray,
+        *args,
+        **kwargs
+    ) -> np.ndarray:
+        r""" Compute the matrix of squared distances.
+        Args:
+            X1 (np.ndarray): First batch of 1-D array data vector.
+            X2 (np.ndarray): Second batch of 1-D array data vector.
+        Returns:
+            (np.ndarray): Distances squared matrix associated to the two batches of data X1 and X2.
         """
 
         raise NotImplementedError

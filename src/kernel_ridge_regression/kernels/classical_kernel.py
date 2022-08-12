@@ -45,6 +45,20 @@ class Gaussian(KernelRidgeRegression):
             (np.ndarray): Gram matrix associated to the two batches of data X1 and X2.
         """
 
-        pairwise_distances = np.array(cdist(X1, X2, 'euclidean'))
-        K = np.exp(-self.gamma * pairwise_distances**2)
-        return np.array(K)
+        distances_squared = self.distances_squared(X1=X1, X2=X2)
+        return np.exp(-self.gamma * distances_squared)
+
+    def distances_squared(
+        self,
+        X1: np.ndarray,
+        X2: np.ndarray
+    ) -> np.ndarray:
+        r""" Compute the matrix of squared distances.
+        Args:
+            X1 (np.ndarray): First batch of 1-D array data vector.
+            X2 (np.ndarray): Second batch of 1-D array data vector.
+        Returns:
+            (np.ndarray): Distance squared matrix associated to the two batches of data X1 and X2.
+        """
+
+        return np.array(cdist(X1, X2, 'euclidean'))**2
