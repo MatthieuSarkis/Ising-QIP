@@ -25,6 +25,7 @@ from src.kernel_ridge_regression.kernels.classical_kernel import Gaussian
 from src.kernel_ridge_regression.kernels.quantum_kernel import Quantum_Kernel
 from src.kernel_ridge_regression.grid import Grid
 from src.utils.train_test_split import train_test_split
+from src.utils.utils import set_random_seed
 
 
 def load_data(
@@ -63,7 +64,7 @@ def make_grid(
 ) -> Tuple[List[float], List[float]]:
 
     GAMMA = map(lambda x: x / (feature_dim * scale), [2.0**k for k in range(-5, 15)]) # cf. (https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC)
-    RIDGE_PARAMETER = [0.000001, 0.00001, 0.0001, 0.001, 0.01, 0.025, 0.05, 0.1]
+    RIDGE_PARAMETER = [0.00001, 0.0001, 0.001, 0.01, 0.025, 0.05, 0.1]
 
     return GAMMA, RIDGE_PARAMETER
 
@@ -90,6 +91,9 @@ def instantiate_regressor(args) -> KernelRidgeRegression:
 
 def main(args) -> None:
 
+    # Initializing the pseudo-random number generator for reproducibility
+    set_random_seed(seed=args.seed)
+
     # Create the log directory tree
     save_directory = os.path.join("./saved_models", "grid", 'regressor={}'.format(args.regressor))
     os.makedirs(save_directory, exist_ok=True)
@@ -102,9 +106,12 @@ def main(args) -> None:
         X_val = X_val.reshape(-1, args.image_size**2)
 
     # Instanciate the regressor and the grid
-    GAMMA, RIDGE_PARAMETER = make_grid(feature_dim=X_train.shape[1], scale=moment(X_train, axis=None, moment=2 if args.regressor=='gaussian' else 4))
+    gamma_list, ridge_parameter_list = make_grid(
+        feature_dim=X_train.shape[1],
+        scale=moment(X_train, axis=None, moment=2 if args.regressor=='gaussian' else 4)
+    )
     regressor = instantiate_regressor(args=args)
-    grid = Grid(regressor=regressor, ridge_parameter=RIDGE_PARAMETER, gamma=GAMMA, save_directory=save_directory)
+    grid = Grid(regressor=regressor, ridge_parameter=ridge_parameter_list, gamma=gamma_list, save_directory=save_directory)
 
     # Run the grid search
     grid.fit(X_train, y_train, X_val, y_val)
@@ -114,23 +121,23 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     # Dataset parameters
-    parser.add_argument("--image_size", type=int, default=16)
+    parser.add_argument("--image_size",   type=int, default=16)
     parser.add_argument("--dataset_size", type=int, default=100)
-    parser.add_argument("--regressor", type=str, default='gaussian', choices=['gaussian', 'quantum'])
+    parser.add_argument("--regressor",    type=str, default='gaussian', choices=['gaussian', 'quantum'])
     parser.add_argument("--memory_bound", type=int)
 
     # Qiskit parameters
     parser.add_argument("--backend_type", type=str, default="simulator")
     parser.add_argument("--backend_name", type=str, default="statevector_simulator")
-    parser.add_argument('--mitigate', dest='mitigate', action='store_true')
-    parser.add_argument('--no-mitigate', dest='mitigate', action='store_false')
+    parser.add_argument('--mitigate',     dest='mitigate', action='store_true')
+    parser.add_argument('--no-mitigate',  dest='mitigate', action='store_false')
     parser.set_defaults(set_mitigate=False)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--shots", type=int)
-    parser.add_argument("--hub", type=str, default="ibm-q")
-    parser.add_argument("--group", type=str, default="open")
-    parser.add_argument("--project", type=str, default="main")
-    parser.add_argument("--job_name", type=str, default="ising_qip")
+    parser.add_argument("--seed",         type=int, default=42)
+    parser.add_argument("--shots",        type=int)
+    parser.add_argument("--hub",          type=str, default="ibm-q")
+    parser.add_argument("--group",        type=str, default="open")
+    parser.add_argument("--project",      type=str, default="main")
+    parser.add_argument("--job_name",     type=str, default="ising_qip")
 
     args = parser.parse_args()
     main(args=args)

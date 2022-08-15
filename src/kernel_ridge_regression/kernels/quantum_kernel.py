@@ -212,18 +212,26 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
             # split the batches into smaller batches and compute the overlap matrix block by block.
             else:
 
-                overlap_squared = np.zeros(shape=(N1, N2))
+                self.parallelize = False
 
-                for i in range(0, N1, self.memory_bound):
-                    for j in range(0, N2, self.memory_bound):
+                if self.parallelize:
 
-                        print((i, j))
+                    pass
 
-                        X1_temp = X1[i:i+self.memory_bound]
-                        X2_temp = X2[j:j+self.memory_bound]
-                        n1 = X1_temp.shape[0]
-                        n2 = X2_temp.shape[0]
-                        overlap_squared[i:i+n1, j:j+n2] = self.overlap_squared(X1_temp, X2_temp)
+                else:
+
+                    overlap_squared = np.zeros(shape=(N1, N2))
+
+                    for i in range(0, N1, self.memory_bound):
+                        for j in range(0, N2, self.memory_bound):
+
+                            print((i,j))
+
+                            X1_temp = X1[i:i+self.memory_bound]
+                            X2_temp = X2[j:j+self.memory_bound]
+                            n1 = X1_temp.shape[0]
+                            n2 = X2_temp.shape[0]
+                            overlap_squared[i:i+n1, j:j+n2] = self.__overlap_squared(X1_temp, X2_temp)
 
                 return overlap_squared
 

@@ -15,6 +15,18 @@ import json
 import torch
 from typing import Tuple
 import re
+import os
+import random
+import numpy as np
+
+
+def set_random_seed(
+    seed: int = 42
+) -> None:
+
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    random.seed(seed)
+    np.random.seed(seed)
 
 def plot_losses(
     path_to_loss_history: str,
@@ -30,7 +42,7 @@ def plot_losses(
         name = re.split('_', key)[-1]
         if name == 'total':
             _ = axs[0][0].plot(value, label=key)
-        elif name == 'reconstruction': 
+        elif name == 'reconstruction':
             _ = axs[0][1].plot(value, label=key)
         elif name == 'kl':
             _ = axs[1][1].plot(value, label=key)
@@ -49,7 +61,7 @@ def plot_losses(
     axs[0][1].set_title('Reconstruction Loss')
     axs[1][1].set_title('KL divergence')
     axs[1][0].set_title('Regularization')
-           
+
     plt.tight_layout()
 
     fig.savefig(save_directory)
@@ -60,18 +72,18 @@ def train_test_split(
     y: torch.tensor,
     validation_fraction: float = 0.25,
 ) -> Tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor]:
-    
+
     dataset_size = y.shape[0]
-    
+
     idx = torch.randperm(dataset_size)
     X = X[idx]
     y = y[idx]
-    
+
     split_idx = int(dataset_size * (1 - validation_fraction))
-    
+
     X_train = X[:split_idx]
     y_train = y[:split_idx]
     X_test = X[split_idx:]
     y_test = y[split_idx:]
-    
+
     return X_train, y_train, X_test, y_test

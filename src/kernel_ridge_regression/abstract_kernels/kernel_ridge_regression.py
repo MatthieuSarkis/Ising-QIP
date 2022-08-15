@@ -57,7 +57,6 @@ class KernelRidgeRegression(ABC):
 
         # Parameters of the model
         self.alpha: Optional[np.ndarray] = None
-        self.K: Optional[np.ndarray] = None
 
     @property
     def ridge_parameter(self) -> float:
@@ -97,11 +96,11 @@ class KernelRidgeRegression(ABC):
         key = str(hash((X.tobytes(), X.tobytes(), self.gamma)))
         if not key in self.hash_gram:
             self.hash_gram[key] = self.kernel(X, X)
-        self.K = self.hash_gram[key]
+        K = self.hash_gram[key]
 
         # Analytic solution for the parameters of the model (the loss function is just quadratic in alpha)
         try:
-            self.alpha = solve(self.K + self._ridge_parameter * np.eye(X.shape[0]), y, assume_a='pos')
+            self.alpha = solve(K + self._ridge_parameter * np.eye(X.shape[0]), y, assume_a='pos')
         except (np.linalg.LinAlgError, ValueError, np.lina):
             return
 
@@ -129,17 +128,17 @@ class KernelRidgeRegression(ABC):
         key = hash((X.tobytes(), X.tobytes(), self.gamma))
         if not key in self.hash_gram:
             self.hash_gram[key] = self.kernel(X, X)
-        self.K = self.hash_gram[key]
+        K = self.hash_gram[key]
 
         # Initialization of the parameters
         self.alpha = np.zeros(X.shape[0])
 
         # Entering in the training loop
         for _ in range(number_epochs):
-            y_predicted = self.K.dot(self.alpha)
+            y_predicted = K.dot(self.alpha)
 
             # Kernelized loss function with Ridge regularization
-            grad_alpha = 2 * self.K.dot(y_predicted - y) + 2 * self.ridge_parameter * y_predicted
+            grad_alpha = 2 * K.dot(y_predicted - y) + 2 * self.ridge_parameter * y_predicted
 
             # Updating the parameters
             self.alpha -= learning_rate * grad_alpha
