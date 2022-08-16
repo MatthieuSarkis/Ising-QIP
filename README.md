@@ -12,6 +12,7 @@ The quantum embedding and quantum kernel estimation is written in python and lev
 * python 3.8.10
 * matplotlib
 * tqdm
+* multiprocessing
 * numpy
 * ipykernel
 * qiskit
