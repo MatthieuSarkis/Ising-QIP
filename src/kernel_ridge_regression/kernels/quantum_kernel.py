@@ -16,7 +16,7 @@ Implementation of the Quantum Kernel Ridge Regression.
 
 import numpy as np
 from typing import Optional
-from qiskit import QuantumCircuit, QuantumRegister
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
 from qiskit.result.counts import Counts
 from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit.result import Result
@@ -35,15 +35,22 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
     def __init__(
         self,
         memory_bound: Optional[int] = None,
+        use_ancilla: bool = False,
         *args,
         **kwargs,
     ) -> None:
-        r"""Constructor for the quantum kernel class."""
+        r"""Constructor for the quantum kernel class.
+        Args:
+            memory_bound (Optional[int]): compute the gram matrix in blocks of size memory_bound*memory_bound
+            use_ancilla (bool): whether or not to use ancilla qubits in the compilation of X-gates controlled
+            by a large number of qubits.
+        """
 
         super(Quantum_Kernel, self).__init__(*args, **kwargs)
         self.name = 'quantum_kernel'
         self.num_qubits: Optional[int] = None
         self.memory_bound = memory_bound
+        self.use_ancilla = use_ancilla
         self.hash_overlap_squared: Dict[int, np.ndarray] = {}
 
     def kernel(
@@ -135,13 +142,13 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                     for c1 in bounds1:
                         for c2 in bounds2:
                             c = c2.compose(c1.inverse())
-                            if self._backend_type == 'IBMQ':
+                            if self._backend_type == 'IBMQ' or self.use_ancilla:
                                 c = c.measure_all(inplace=False)
                             circuits.append(c)
 
                     #qc = transpile(circuits, self._backend)
 
-                    if self._backend_type == 'IBMQ':
+                    if (self._backend_type == 'IBMQ') or self.use_ancilla:
 
                         if self.mitigate:
                             qr = QuantumRegister(self.n_qubits)
@@ -150,25 +157,25 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                             #qc = cal_qc + qc
                             qc = meas_calibs + qc
 
-                            results = self.qi.execute(circuits=qc, had_transpiled=False)
+                            results = self.qi.execute(circuits=qc, had_transpiled=True)
 
                             # Split the results into to Result objects for calibration and kernel computation
-                            cal_res = Result(backend_name= results.backend_name,
-                                backend_version= results.backend_version,
-                                qobj_id= results.qobj_id,
-                                job_id= results.job_id,
-                                success= results.success,
-                                #results = results.results[:len(cal_qc)]
-                                results = results.results[:len(meas_calibs)]
+                            cal_res = Result(backend_name=results.backend_name,
+                                backend_version=results.backend_version,
+                                qobj_id=results.qobj_id,
+                                job_id=results.job_id,
+                                success=results.success,
+                                #results=results.results[:len(cal_qc)]
+                                results=results.results[:len(meas_calibs)]
                             )
 
-                            data_res = Result(backend_name= results.backend_name,
-                                backend_version= results.backend_version,
-                                qobj_id= results.qobj_id,
-                                job_id= results.job_id,
-                                success= results.success,
-                                #results = results.results[len(cal_qc):]
-                                results = results.results[len(meas_calibs):]
+                            data_res = Result(backend_name=results.backend_name,
+                                backend_version=results.backend_version,
+                                qobj_id=results.qobj_id,
+                                job_id=results.job_id,
+                                success=results.success,
+                                #results=results.results[len(cal_qc):]
+                                results=results.results[len(meas_calibs):]
                             )
 
                             # Apply measurement calibration and computer the calibration filter
@@ -179,7 +186,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                             counts = mitigated_results.get_counts()
 
                         else:
-                            #result = self.qi.execute(circuits=qc, had_transpiled=True)
+                            #result = self.qi.execute(circuits=qc, had_transpiled=True).results
+                            #result = self._backend.run(transpile(circuits[0], self._backend)).result()
                             result = self.qi.execute(circuits=circuits, had_transpiled=False)
                             counts = result.get_counts()
 
@@ -187,17 +195,22 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                         if type(counts) == Counts:
                             counts = [counts]
 
+                        # Remove the bit coming from measuring the ancilla qubit
+                        # (recall the convention of qiskit concerning the qubits ordering)
+                        if self.use_ancilla:
+                            counts = [{key[1:]: value for (key, value) in count.items()} for count in counts]
+
                         # The statistics give us access to the probabilities, hence to the
                         # absolute overlap squared directly.
-                        overlap_squared = [count[num_qubits*'0'] / self.shots for count in counts]
+                        overlap_squared = [count[num_qubits*'0'] / self._shots for count in counts]
                         overlap_squared = np.array(overlap_squared)
 
                     else:
                         # Preparing the state |00...0>
                         computational_basis_vector = np.zeros(shape=(2**num_qubits,))
                         computational_basis_vector[0] = 1
-                        #result = self.qi.execute(circuits=qc, had_transpiled=True)
-                        result = self.qi.execute(circuits=circuits, had_transpiled=False)
+                        result = self.qi.execute(circuits=qc, had_transpiled=True)
+                        #result = self.qi.execute(circuits=circuits, had_transpiled=False)
                         statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
                         statevector = np.stack(statevector)
                         overlap = np.einsum('a,ba->b', computational_basis_vector, statevector)
@@ -206,6 +219,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                     overlap_squared = overlap_squared.reshape((X1.shape[0], X2.shape[0]))
 
                 self.hash_overlap_squared[key] = overlap_squared
+
                 return overlap_squared
 
             # In case the batches of data exceed the bound allowed by the RAM (specified by self.memory_bound),
@@ -225,8 +239,6 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                     for i in range(0, N1, self.memory_bound):
                         for j in range(0, N2, self.memory_bound):
 
-                            print((i,j))
-
                             X1_temp = X1[i:i+self.memory_bound]
                             X2_temp = X2[j:j+self.memory_bound]
                             n1 = X1_temp.shape[0]
@@ -241,7 +253,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
     ) -> QuantumCircuit:
         r"""Associates a quantum circuit to an image. The output of the circuit is the encoded image.
         Args:
-            image (np.mdarray): Single image whose quantum circuit representation one is computing.
+            image (np.ndarray): Single image whose quantum circuit representation one is computing.
         Returns:
             (QuantumCircuit): Quatum circuit representation of image.
         """
@@ -254,11 +266,20 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         image_register = QuantumRegister(image_qubits, 'position')
         spin_register = QuantumRegister(1, 'spin')
 
-        qc = QuantumCircuit(spin_register, image_register)
+        if self.use_ancilla:
+            ancilla_register = QuantumRegister(1, 'ancilla')
+            #classical_register = ClassicalRegister(image_qubits + 2, 'classical register')
+            #qc = QuantumCircuit(spin_register, image_register, ancilla_register, classical_register)
+            qc = QuantumCircuit(spin_register, image_register, ancilla_register)
+
+        else:
+            qc = QuantumCircuit(spin_register, image_register)
 
         qc.i(0)
         for i in range(1, image_register.size + 1):
             qc.h(i)
+        if self.use_ancilla:
+            qc.i(image_qubits+1)
 
         qc.barrier()
 
@@ -282,7 +303,21 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                             flip_idx.append(jj+side_qubits+1)
                             qc.x(jj+side_qubits+1)
 
-                    qc.mcx(list(range(1, image_qubits+1)), 0, mode='noancilla')
+                    if self.use_ancilla:
+                        qc.mcx(
+                            control_qubits=list(range(1, image_qubits+1)),
+                            target_qubit=0,
+                            ancilla_qubits=image_qubits+1,
+                            mode='recursion'
+                        )
+
+                    else:
+                        qc.mcx(
+                            control_qubits=list(range(1, image_qubits+1)),
+                            target_qubit=0,
+                            ancilla_qubits=None,
+                            mode='noancilla'
+                        )
 
                     for q in flip_idx:
                         qc.x(q)

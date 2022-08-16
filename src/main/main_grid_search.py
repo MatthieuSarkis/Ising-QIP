@@ -63,8 +63,10 @@ def make_grid(
     scale: float,
 ) -> Tuple[List[float], List[float]]:
 
-    GAMMA = map(lambda x: x / (feature_dim * scale), [2.0**k for k in range(-5, 15)]) # cf. (https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC)
-    RIDGE_PARAMETER = [0.00001, 0.0001, 0.001, 0.01, 0.025, 0.05, 0.1]
+    #GAMMA = map(lambda x: x / (feature_dim * scale), [2.0**k for k in range(-5, 15)]) # cf. (https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC)
+    GAMMA = [1.0] # cf. (https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC)
+    #RIDGE_PARAMETER = [0.00001, 0.0001, 0.001, 0.01, 0.025, 0.05, 0.1]
+    RIDGE_PARAMETER = [0.1]
 
     return GAMMA, RIDGE_PARAMETER
 
@@ -76,6 +78,7 @@ def instantiate_regressor(args) -> KernelRidgeRegression:
     elif args.regressor == 'quantum':
         regressor = Quantum_Kernel(
             memory_bound=args.memory_bound,
+            use_ancilla=args.use_ancilla,
             backend_type=args.backend_type,
             backend_name=args.backend_name,
             mitigate=args.mitigate,
@@ -125,13 +128,16 @@ if __name__ == '__main__':
     parser.add_argument("--dataset_size", type=int, default=100)
     parser.add_argument("--regressor",    type=str, default='gaussian', choices=['gaussian', 'quantum'])
     parser.add_argument("--memory_bound", type=int)
+    parser.add_argument('--use_ancilla',     dest='use_ancilla', action='store_true')
+    parser.add_argument('--no-use_ancilla',  dest='use_ancilla', action='store_false')
+    parser.set_defaults(use_ancilla=False)
 
     # Qiskit parameters
     parser.add_argument("--backend_type", type=str, default="simulator")
     parser.add_argument("--backend_name", type=str, default="statevector_simulator")
     parser.add_argument('--mitigate',     dest='mitigate', action='store_true')
     parser.add_argument('--no-mitigate',  dest='mitigate', action='store_false')
-    parser.set_defaults(set_mitigate=False)
+    parser.set_defaults(mitigate=False)
     parser.add_argument("--seed",         type=int, default=42)
     parser.add_argument("--shots",        type=int)
     parser.add_argument("--hub",          type=str, default="ibm-q")
