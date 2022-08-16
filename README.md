@@ -50,6 +50,12 @@ Massaging a little bit the definition of the quantum kernel, using the definitio
 
 The quantum linear kernel $\langle\psi(x)|\psi(y)\rangle=\langle0|\mathcal U^\dagger(x)\mathcal U(y)|0\rangle$ can be estimated with the following procedure: evolve the initial state $|0\rangle^{\otimes n}$ through the unitary gate $\mathcal U^\dagger(x)\mathcal U(y)$, measure the resulting state in the computational basis a certain number of shots, and count the fraction of times the bitstring $0\dots 0$ appears. The quantum kernel $k_\text{q}(x, y)$ is then computed by classical postprocessing of the obtained linear quantum kernel.
 
+### Comments about optimization
+
+The depth of the quantum circuits needed for the quantum kernel estimation can be reduced by using an implementation of the X-gate with multiple control qubits which uses ancillae qubits.
+
+The entries of the Gram matrices associated to the kernel under consideration can be computed in parallel using multiple CPUs.
+
 
 ## Usage
 

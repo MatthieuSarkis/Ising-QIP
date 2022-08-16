@@ -16,12 +16,14 @@ Implementation of the Quantum Kernel Ridge Regression.
 
 import numpy as np
 from typing import Optional
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
+from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.result.counts import Counts
 from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit.result import Result
 from math import ceil, log2
 from typing import Dict
+import multiprocess as mp
+import itertools
 
 from src.kernel_ridge_regression.abstract_kernels.qiskit_kernel import QiskitKernel
 from src.kernel_ridge_regression.abstract_kernels.kernel_ridge_regression import KernelRidgeRegression
@@ -34,16 +36,18 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
     def __init__(
         self,
-        memory_bound: Optional[int] = None,
+        memory_bound: Optional[int] = 10,
         use_ancilla: bool = False,
+        parallelize: bool = True,
         *args,
         **kwargs,
     ) -> None:
         r"""Constructor for the quantum kernel class.
         Args:
-            memory_bound (Optional[int]): compute the gram matrix in blocks of size memory_bound*memory_bound
+            memory_bound (Optional[int]): compute the gram matrix in blocks of size memory_bound*memory_bound.
             use_ancilla (bool): whether or not to use ancilla qubits in the compilation of X-gates controlled
             by a large number of qubits.
+            parallelize (bool): whether or not to compute the gram matrix entries in parallel using multiple CPUs.
         """
 
         super(Quantum_Kernel, self).__init__(*args, **kwargs)
@@ -51,6 +55,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         self.num_qubits: Optional[int] = None
         self.memory_bound = memory_bound
         self.use_ancilla = use_ancilla
+        self.parallelize = parallelize
+
         self.hash_overlap_squared: Dict[int, np.ndarray] = {}
 
     def kernel(
@@ -146,7 +152,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                                 c = c.measure_all(inplace=False)
                             circuits.append(c)
 
-                    #qc = transpile(circuits, self._backend)
+                    qc = transpile(circuits, self._backend)
 
                     if (self._backend_type == 'IBMQ') or self.use_ancilla:
 
@@ -186,9 +192,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                             counts = mitigated_results.get_counts()
 
                         else:
-                            #result = self.qi.execute(circuits=qc, had_transpiled=True).results
-                            #result = self._backend.run(transpile(circuits[0], self._backend)).result()
-                            result = self.qi.execute(circuits=circuits, had_transpiled=False)
+                            result = self.qi.execute(circuits=qc, had_transpiled=True)
+                            #result = self.qi.execute(circuits=circuits, had_transpiled=False)
                             counts = result.get_counts()
 
                         # Handle the case of a batch containing a single image
@@ -200,17 +205,22 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                         if self.use_ancilla:
                             counts = [{key[1:]: value for (key, value) in count.items()} for count in counts]
 
+                        for count in counts:
+                            if num_qubits*'0' not in count:
+                                count[num_qubits*'0'] = 0
+
                         # The statistics give us access to the probabilities, hence to the
                         # absolute overlap squared directly.
                         overlap_squared = [count[num_qubits*'0'] / self._shots for count in counts]
                         overlap_squared = np.array(overlap_squared)
 
-                    else:
+                    elif self._backend_name == 'statevector_simulator':
+
                         # Preparing the state |00...0>
                         computational_basis_vector = np.zeros(shape=(2**num_qubits,))
                         computational_basis_vector[0] = 1
-                        result = self.qi.execute(circuits=qc, had_transpiled=True)
-                        #result = self.qi.execute(circuits=circuits, had_transpiled=False)
+                        #result = self.qi.execute(circuits=qc, had_transpiled=True)
+                        result = self.qi.execute(circuits=circuits, had_transpiled=False)
                         statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
                         statevector = np.stack(statevector)
                         overlap = np.einsum('a,ba->b', computational_basis_vector, statevector)
@@ -226,12 +236,24 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
             # split the batches into smaller batches and compute the overlap matrix block by block.
             else:
 
-                self.parallelize = False
-
+                # compute all the gram matrix elements in parallel
                 if self.parallelize:
 
-                    pass
+                    input = ((i,j) for i, j in itertools.product(range(N1), range(N2)))
+                    overlap_squared = np.zeros(shape=(N1*N2,))
 
+                    pool = mp.Pool()
+
+                    result = pool.starmap(lambda i, j: self.__overlap_squared(X1[i:i+1], X2[j:j+1]), input)
+
+                    for i, r in enumerate(result):
+                        overlap_squared[i] = r
+                    overlap_squared.shape = (N1, N2)
+
+                    pool.close()
+                    pool.join()
+
+                # embedded loops to compute the gram matrix chunk by chunk
                 else:
 
                     overlap_squared = np.zeros(shape=(N1, N2))
