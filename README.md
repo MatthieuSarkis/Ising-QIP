@@ -87,8 +87,10 @@ python src/main/main_grid_search.py \
     --regressor quantum \
     --memory_bound 10 \
     --backend_type simulator \
-    --backend_name statevector_simulator \
+    --backend_name qasm_simulator \
     --no-mitigate \
+    --use_ancilla \
+    --parallelize \
     --seed 42 \
     --shots 1024 \
     --hub ibm-q \
