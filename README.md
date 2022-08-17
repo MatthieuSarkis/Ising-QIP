@@ -57,6 +57,13 @@ The depth of the quantum circuits needed for the quantum kernel estimation can b
 
 The entries of the Gram matrices associated to the kernel under consideration can be computed in parallel using multiple CPUs.
 
+### Comments about the hardware
+
+Since I am using a free IBMQ account, I only have access to at most 7 qubits. For instance that means that I can at most treat 8 by 8 images, since their quantum embedding requires $2\log_2(8) + 1 = 7$ qubits. It also means that I cannot use ancillae qubits.
+
+To treat bigger images would require to have access to more qubits. For instance 64 by 64 images would require $2\log_2(64) + 1 = 13$ qubits. In order to reduce the depth of the quantum circuits involved in the quantum kernel estimation, the implementation of the controlled X-gate involving and ancilla qubit is recommended, hence 14 qubits would be necessary.
+
+One can also of course use a qasm simulator.
 
 ## Usage
 

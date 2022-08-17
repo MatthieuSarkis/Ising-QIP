@@ -7,15 +7,13 @@
 # 'src/main/main_grid_search.py'
 
 IMAGE_SIZE=16
-DATASET_SIZE=1000
-#REGRESSOR='gaussian'
-REGRESSOR='quantum'
-MEMORY_BOUND=2
+DATASET_SIZE=10
+REGRESSOR='gaussian'
+#REGRESSOR='quantum'
+MEMORY_BOUND=3
 
 BACKEND_TYPE="simulator"
-#BACKEND_TYPE="IBMQ"
-#BACKEND_NAME="statevector_simulator"
-BACKEND_NAME="qasm_simulator"
+BACKEND_NAME="statevector_simulator"
 SEED=42
 SHOTS=1024
 HUB="ibm-q"
@@ -23,19 +21,21 @@ GROUP="open"
 PROJECT="main"
 JOB_NAME="ising_qip"
 
-python src/main/main_grid_search.py \
+python src/main/main_autoker.py \
     --image_size $IMAGE_SIZE \
     --dataset_size $DATASET_SIZE \
     --regressor $REGRESSOR \
+    --learning_rate_alpha 1e-4 \
+    --learning_rate_gamma 1e-7 \
+    --learning_rate_ridge_parameter 1e-5 \
+    --number_epochs 1000 \
     --memory_bound $MEMORY_BOUND \
     --backend_type $BACKEND_TYPE \
+    --backend_name $BACKEND_NAME \
     --no-mitigate \
-    --use_ancilla \
-    --parallelize \
     --seed $SEED \
     --shots $SHOTS \
     --hub $HUB \
     --group $GROUP \
     --project $PROJECT \
-    --job_name $JOB_NAME \
-    --backend_name $BACKEND_NAME
+    --job_name $JOB_NAME

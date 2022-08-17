@@ -19,6 +19,7 @@ job execution.
 from typing import Optional
 from qiskit import Aer
 from qiskit.providers.aer import AerError
+from qiskit.providers.ibmq import least_busy
 from qiskit.utils import QuantumInstance
 
 class QiskitKernel():
@@ -78,9 +79,11 @@ class QiskitKernel():
             from qiskit import IBMQ
             IBMQ.load_account()
             provider = IBMQ.get_provider(hub=self._hub, group=self._group, project=self._project)
-            self._backend = provider.get_backend(self._backend_name)
+            filter = lambda x: x.configuration().n_qubits >= 7 and not x.configuration().simulator and x.status().operational == True
+            self._backend = least_busy(provider.backends(filters=filter))
 
         else:
             self._backend = Aer.get_backend(self._backend_name)
 
-        self.qi = QuantumInstance(self._backend, seed_transpiler=self._seed, seed_simulator=self._seed, shots=self._shots)
+        self.qi = QuantumInstance(self._backend, seed_transpiler=self._seed, shots=self._shots)
+        #self.qi = QuantumInstance(self._backend, seed_transpiler=self._seed, seed_simulator=self._seed, shots=self._shots)

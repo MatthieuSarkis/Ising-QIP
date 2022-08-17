@@ -76,7 +76,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         """
 
         distances_squared = self.distances_squared(X1=X1, X2=X2, from_quantumstate=from_quantumstate)
-        return np.exp(-self.gamma * distances_squared)
+        kernel = np.exp(-self.gamma * distances_squared)
+        return kernel
 
     def distances_squared(
         self,
@@ -111,13 +112,16 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
             from_quantumstate (bool): Whether of not to use preprocessed image data
             which has already been mapped to a quantum state.
         Returns:
-            (np.ndarray): Quantum Gram matrix associated to the two batches of data X1 and X2.
+            (np.ndarray): Squared overlap matrix associated to the two batches of data X1 and X2.
         """
 
+        # Check whether the overlap matrix associated to (X1, X2)
+        # is already stored in the hash table.
         key = hash((X1.tobytes(), X2.tobytes()))
         if key in self.hash_overlap_squared:
             return self.hash_overlap_squared[key]
 
+        # Otherwise compute it.
         else:
 
             N1 = X1.shape[0]
@@ -144,6 +148,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                         q = self.__image_to_circuit(image=X2[i])
                         bounds2.append(q)
 
+                    # To estimate |<psi_i|psi_j>|^2, glue the Hermitian conjugate of
+                    # circuit i to circuit j.
                     circuits = []
                     for c1 in bounds1:
                         for c2 in bounds2:
@@ -154,47 +160,52 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
                     qc = transpile(circuits, self._backend)
 
+                    # In case one is not using a simulator of requires
+                    # an ancilla qubit for the implementation of the controlled X-gates
+                    # it is necessary to perform measurements
                     if (self._backend_type == 'IBMQ') or self.use_ancilla:
 
-                        if self.mitigate:
-                            qr = QuantumRegister(self.n_qubits)
-                            meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
-                            #cal_qc = transpile(meas_calibs, self.qi.backend)
-                            #qc = cal_qc + qc
-                            qc = meas_calibs + qc
+                        #if self.mitigate:
+                        #    qr = QuantumRegister(self.n_qubits)
+                        #    meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
+                        #    #cal_qc = transpile(meas_calibs, self.qi.backend)
+                        #    #qc = cal_qc + qc
+                        #    qc = meas_calibs + qc
+#
+                        #    results = self.qi.execute(circuits=qc, had_transpiled=True)
+#
+                        #    # Split the results into to Result objects for calibration and kernel computation
+                        #    cal_res = Result(backend_name=results.backend_name,
+                        #        backend_version=results.backend_version,
+                        #        qobj_id=results.qobj_id,
+                        #        job_id=results.job_id,
+                        #        success=results.success,
+                        #        #results=results.results[:len(cal_qc)]
+                        #        results=results.results[:len(meas_calibs)]
+                        #    )
+#
+                        #    data_res = Result(backend_name=results.backend_name,
+                        #        backend_version=results.backend_version,
+                        #        qobj_id=results.qobj_id,
+                        #        job_id=results.job_id,
+                        #        success=results.success,
+                        #        #results=results.results[len(cal_qc):]
+                        #        results=results.results[len(meas_calibs):]
+                        #    )
+#
+                        #    # Apply measurement calibration and computer the calibration filter
+                        #    meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
+#
+                        #    # Apply the calibration filter to the results and get the counts
+                        #    mitigated_results = meas_filter.apply(data_res)
+                        #    counts = mitigated_results.get_counts()
+#
+                        #else:
 
-                            results = self.qi.execute(circuits=qc, had_transpiled=True)
-
-                            # Split the results into to Result objects for calibration and kernel computation
-                            cal_res = Result(backend_name=results.backend_name,
-                                backend_version=results.backend_version,
-                                qobj_id=results.qobj_id,
-                                job_id=results.job_id,
-                                success=results.success,
-                                #results=results.results[:len(cal_qc)]
-                                results=results.results[:len(meas_calibs)]
-                            )
-
-                            data_res = Result(backend_name=results.backend_name,
-                                backend_version=results.backend_version,
-                                qobj_id=results.qobj_id,
-                                job_id=results.job_id,
-                                success=results.success,
-                                #results=results.results[len(cal_qc):]
-                                results=results.results[len(meas_calibs):]
-                            )
-
-                            # Apply measurement calibration and computer the calibration filter
-                            meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
-
-                            # Apply the calibration filter to the results and get the counts
-                            mitigated_results = meas_filter.apply(data_res)
-                            counts = mitigated_results.get_counts()
-
-                        else:
-                            result = self.qi.execute(circuits=qc, had_transpiled=True)
-                            #result = self.qi.execute(circuits=circuits, had_transpiled=False)
-                            counts = result.get_counts()
+                        result = self.qi.execute(circuits=qc, had_transpiled=True)
+                        #from qiskit.tools import job_monitor
+                        #job_monitor(result)
+                        counts = result.get_counts()
 
                         # Handle the case of a batch containing a single image
                         if type(counts) == Counts:
@@ -214,12 +225,13 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                         overlap_squared = [count[num_qubits*'0'] / self._shots for count in counts]
                         overlap_squared = np.array(overlap_squared)
 
+                    # If one uses a simulator, one can for instance
+                    # directly access the output statevectors.
                     elif self._backend_name == 'statevector_simulator':
 
                         # Preparing the state |00...0>
                         computational_basis_vector = np.zeros(shape=(2**num_qubits,))
                         computational_basis_vector[0] = 1
-                        #result = self.qi.execute(circuits=qc, had_transpiled=True)
                         result = self.qi.execute(circuits=circuits, had_transpiled=False)
                         statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
                         statevector = np.stack(statevector)
@@ -233,16 +245,17 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                 return overlap_squared
 
             # In case the batches of data exceed the bound allowed by the RAM (specified by self.memory_bound),
-            # split the batches into smaller batches and compute the overlap matrix block by block.
+            # either split the batches into smaller batches and compute the overlap matrix block by block,
+            # or fully parallelize the computation of the overlap matrix.
             else:
 
-                # compute all the gram matrix elements in parallel
+                # compute all the overlap matrix elements in parallel
                 if self.parallelize:
 
                     input = ((i,j) for i, j in itertools.product(range(N1), range(N2)))
                     overlap_squared = np.zeros(shape=(N1*N2,))
 
-                    pool = mp.Pool()
+                    pool = mp.Pool(mp.cpu_count()-2)
 
                     result = pool.starmap(lambda i, j: self.__overlap_squared(X1[i:i+1], X2[j:j+1]), input)
 
@@ -253,7 +266,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                     pool.close()
                     pool.join()
 
-                # embedded loops to compute the gram matrix chunk by chunk
+                # embedded loops to compute the overlap matrix chunk by chunk
                 else:
 
                     overlap_squared = np.zeros(shape=(N1, N2))
@@ -266,6 +279,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
                             n1 = X1_temp.shape[0]
                             n2 = X2_temp.shape[0]
                             overlap_squared[i:i+n1, j:j+n2] = self.__overlap_squared(X1_temp, X2_temp)
+
+                self.hash_overlap_squared[key] = overlap_squared
 
                 return overlap_squared
 
@@ -290,8 +305,6 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
         if self.use_ancilla:
             ancilla_register = QuantumRegister(1, 'ancilla')
-            #classical_register = ClassicalRegister(image_qubits + 2, 'classical register')
-            #qc = QuantumCircuit(spin_register, image_register, ancilla_register, classical_register)
             qc = QuantumCircuit(spin_register, image_register, ancilla_register)
 
         else:
