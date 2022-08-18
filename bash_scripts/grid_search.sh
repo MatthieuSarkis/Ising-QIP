@@ -6,12 +6,10 @@
 # that can be found and modified at will in
 # 'src/main/main_grid_search.py'
 
-IMAGE_SIZE=16
-DATASET_SIZE=1000
+IMAGE_SIZE=4
+DATASET_SIZE=10
 #REGRESSOR='gaussian'
 REGRESSOR='quantum'
-MEMORY_BOUND=2
-
 BACKEND_TYPE="simulator"
 #BACKEND_TYPE="IBMQ"
 #BACKEND_NAME="statevector_simulator"
@@ -27,7 +25,6 @@ python src/main/main_grid_search.py \
     --image_size $IMAGE_SIZE \
     --dataset_size $DATASET_SIZE \
     --regressor $REGRESSOR \
-    --memory_bound $MEMORY_BOUND \
     --backend_type $BACKEND_TYPE \
     --no-mitigate \
     --use_ancilla \

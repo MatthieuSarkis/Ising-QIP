@@ -30,25 +30,9 @@ class Gaussian(KernelRidgeRegression):
         r""" Initialize the Gaussian Kernel Ridge Regression from parent's init. """
 
         super(Gaussian, self).__init__(*args, **kwargs)
-        self.name = 'gaussian'
+        self.name = 'classical_gaussian_kernel'
 
-    def kernel(
-        self,
-        X1: np.ndarray,
-        X2: np.ndarray,
-    ) -> np.ndarray:
-        r""" Compute the Gaussian Kernel.
-        Args:
-            X1 (np.ndarray): First batch of 1-D array data vector.
-            X2 (np.ndarray): Second batch of 1-D array data vector.
-        Returns:
-            (np.ndarray): Gram matrix associated to the two batches of data X1 and X2.
-        """
-
-        distances_squared = self.distances_squared(X1=X1, X2=X2)
-        return np.exp(-self.gamma * distances_squared)
-
-    def distances_squared(
+    def _distances_squared(
         self,
         X1: np.ndarray,
         X2: np.ndarray

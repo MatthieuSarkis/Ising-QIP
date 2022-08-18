@@ -68,14 +68,7 @@ class QiskitKernel():
     def __get_quantum_instance(self) -> None:
         """ Get the quantum instance for quamtum experiment. """
 
-        if self._backend_type == "GPU":
-            self._backend = Aer.get_backend(self._backend_name)
-            try:
-                self._backend.set_options(device='GPU')
-            except AerError as e:
-                print(e)
-
-        elif self._backend_type == "IBMQ":
+        if self._backend_type == "IBMQ":
             from qiskit import IBMQ
             IBMQ.load_account()
             provider = IBMQ.get_provider(hub=self._hub, group=self._group, project=self._project)
@@ -84,6 +77,13 @@ class QiskitKernel():
 
         else:
             self._backend = Aer.get_backend(self._backend_name)
+
+            if self._backend_type == "GPU":
+                self._backend = Aer.get_backend(self._backend_name)
+                try:
+                    self._backend.set_options(device='GPU')
+                except AerError as e:
+                    print(e)
 
         self.qi = QuantumInstance(self._backend, seed_transpiler=self._seed, shots=self._shots)
         #self.qi = QuantumInstance(self._backend, seed_transpiler=self._seed, seed_simulator=self._seed, shots=self._shots)

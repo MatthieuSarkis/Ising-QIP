@@ -21,7 +21,6 @@ from qiskit.result.counts import Counts
 from qiskit.utils.mitigation import complete_meas_cal, CompleteMeasFitter
 from qiskit.result import Result
 from math import ceil, log2
-from typing import Dict
 import multiprocess as mp
 import itertools
 
@@ -36,7 +35,6 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
     def __init__(
         self,
-        memory_bound: Optional[int] = 10,
         use_ancilla: bool = False,
         parallelize: bool = True,
         *args,
@@ -44,7 +42,6 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
     ) -> None:
         r"""Constructor for the quantum kernel class.
         Args:
-            memory_bound (Optional[int]): compute the gram matrix in blocks of size memory_bound*memory_bound.
             use_ancilla (bool): whether or not to use ancilla qubits in the compilation of X-gates controlled
             by a large number of qubits.
             parallelize (bool): whether or not to compute the gram matrix entries in parallel using multiple CPUs.
@@ -52,239 +49,147 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
         super(Quantum_Kernel, self).__init__(*args, **kwargs)
         self.name = 'quantum_kernel'
+
         self.num_qubits: Optional[int] = None
-        self.memory_bound = memory_bound
         self.use_ancilla = use_ancilla
         self.parallelize = parallelize
 
-        self.hash_overlap_squared: Dict[int, np.ndarray] = {}
-
-    def kernel(
+    def _distances_squared(
         self,
         X1: np.ndarray,
         X2: np.ndarray,
-        from_quantumstate: bool = False
-    ) -> np.ndarray:
-        r""" Compute the Gram matrix.
-        Args:
-            X1 (np.ndarray): First batch of 2d images.
-            X2 (np.ndarray): Second batch of 2d images.
-            from_quantumstate (bool): Whether of not to use preprocessed image data
-            which has already been mapped to a quantum state.
-        Returns:
-            (np.ndarray): Quantum Gram matrix associated to the two batches of data X1 and X2.
-        """
-
-        distances_squared = self.distances_squared(X1=X1, X2=X2, from_quantumstate=from_quantumstate)
-        kernel = np.exp(-self.gamma * distances_squared)
-        return kernel
-
-    def distances_squared(
-        self,
-        X1: np.ndarray,
-        X2: np.ndarray,
-        from_quantumstate: bool = False
     ) -> np.ndarray:
         r"""This method computes the distance_squared matrix in \exp(- \gamma * distance_squared)
         for the quantum kernel, namely ||\rho(x_1) - \rho(x_2)||_F^2 = 2 (1-|<psi_1|psi_2>|^2).
         Args:
             X1 (np.ndarray): First batch of 2d images.
             X2 (np.ndarray): Second batch of 2d images.
-            from_quantumstate (bool): Whether of not to use preprocessed image data
-            which has already been mapped to a quantum state.
         Returns:
             (np.ndarray): Distance squared matrix associated to the two batches of data X1 and X2.
         """
 
-        overlap_squared = self.__overlap_squared(X1=X1, X2=X2, from_quantumstate=from_quantumstate)
+        if self.parallelize:
+            overlap_squared = self._overlap_squared_parallel(X1=X1, X2=X2)
+
+        else:
+            overlap_squared = self._overlap_squared(X1=X1, X2=X2)
+
         return 2 * (1 - overlap_squared)
 
-    def __overlap_squared(
+    def _overlap_squared_parallel(
         self,
         X1: np.ndarray,
         X2: np.ndarray,
-        from_quantumstate: bool = False
     ) -> np.ndarray:
         r""" Compute the matrix of the modulus squared of the overlaps |<psi_1|psi_2>|^2.
         Args:
             X1 (np.ndarray): First batch of 2d images.
             X2 (np.ndarray): Second batch of 2d images.
-            from_quantumstate (bool): Whether of not to use preprocessed image data
-            which has already been mapped to a quantum state.
         Returns:
             (np.ndarray): Squared overlap matrix associated to the two batches of data X1 and X2.
         """
 
-        # Check whether the overlap matrix associated to (X1, X2)
-        # is already stored in the hash table.
-        key = hash((X1.tobytes(), X2.tobytes()))
-        if key in self.hash_overlap_squared:
-            return self.hash_overlap_squared[key]
+        N1 = X1.shape[0]
+        N2 = X2.shape[0]
 
-        # Otherwise compute it.
-        else:
+        input = ((i,j) for i, j in itertools.product(range(N1), range(N2)))
+        overlap_squared = np.zeros(shape=(N1*N2,))
+        pool = mp.Pool(mp.cpu_count()-2)
+        result = pool.starmap(lambda i, j: self._overlap_squared(X1=X1[i:i+1], X2=X2[j:j+1]), input)
+        for i, r in enumerate(result):
+            overlap_squared[i] = r
+        overlap_squared.shape = (N1, N2)
+        pool.close()
+        pool.join()
 
-            N1 = X1.shape[0]
-            N2 = X2.shape[0]
+        return overlap_squared
 
-            # In case the batches of data are not too large (i.e. do not exceed the self.memory_bound attribute)
-            # one computes the overlap matrix entirely.
-            if (self.memory_bound is None) or (N1 <= self.memory_bound and N2 <= self.memory_bound):
+    def _overlap_squared(
+        self,
+        X1: np.ndarray,
+        X2: np.ndarray,
+    ) -> np.ndarray:
+        r""" Compute the matrix of the modulus squared of the overlaps |<psi_1|psi_2>|^2.
+        Args:
+            X1 (np.ndarray): First batch of 2d images.
+            X2 (np.ndarray): Second batch of 2d images.
+        Returns:
+            (np.ndarray): Squared overlap matrix associated to the two batches of data X1 and X2.
+        """
 
-                if from_quantumstate:
-                    overlap = np.einsum('ab,cb->ac', X1, X2)
-                    overlap_squared = np.absolute(overlap)**2
+        num_qubits = 2 * ceil(log2(X1.shape[-1])) + 1
 
-                else:
-                    num_qubits = 2 * ceil(log2(X1.shape[-1])) + 1
+        bounds1 = []
+        for i in range(X1.shape[0]):
+            q = self._image_to_circuit(image=X1[i])
+            bounds1.append(q)
 
-                    bounds1 = []
-                    for i in range(X1.shape[0]):
-                        q = self.__image_to_circuit(image=X1[i])
-                        bounds1.append(q)
+        bounds2 = []
+        for i in range(X2.shape[0]):
+            q = self._image_to_circuit(image=X2[i])
+            bounds2.append(q)
 
-                    bounds2 = []
-                    for i in range(X2.shape[0]):
-                        q = self.__image_to_circuit(image=X2[i])
-                        bounds2.append(q)
+        # To estimate |<psi_i|psi_j>|^2, glue the Hermitian conjugate of
+        # circuit i to circuit j.
+        circuits = []
+        for c1 in bounds1:
+            for c2 in bounds2:
+                c = c2.compose(c1.inverse())
+                if self._backend_type == 'IBMQ' or self.use_ancilla:
+                    c = c.measure_all(inplace=False)
+                circuits.append(c)
 
-                    # To estimate |<psi_i|psi_j>|^2, glue the Hermitian conjugate of
-                    # circuit i to circuit j.
-                    circuits = []
-                    for c1 in bounds1:
-                        for c2 in bounds2:
-                            c = c2.compose(c1.inverse())
-                            if self._backend_type == 'IBMQ' or self.use_ancilla:
-                                c = c.measure_all(inplace=False)
-                            circuits.append(c)
+        qc = transpile(circuits, self._backend)
 
-                    qc = transpile(circuits, self._backend)
+        # In case one is not using a simulator of requires
+        # an ancilla qubit for the implementation of the controlled X-gates
+        # it is necessary to perform measurements
+        if (self._backend_type == 'IBMQ') or self.use_ancilla:
 
-                    # In case one is not using a simulator of requires
-                    # an ancilla qubit for the implementation of the controlled X-gates
-                    # it is necessary to perform measurements
-                    if (self._backend_type == 'IBMQ') or self.use_ancilla:
+            # If needed, quantum error mitigation goes here
 
-                        #if self.mitigate:
-                        #    qr = QuantumRegister(self.n_qubits)
-                        #    meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
-                        #    #cal_qc = transpile(meas_calibs, self.qi.backend)
-                        #    #qc = cal_qc + qc
-                        #    qc = meas_calibs + qc
-#
-                        #    results = self.qi.execute(circuits=qc, had_transpiled=True)
-#
-                        #    # Split the results into to Result objects for calibration and kernel computation
-                        #    cal_res = Result(backend_name=results.backend_name,
-                        #        backend_version=results.backend_version,
-                        #        qobj_id=results.qobj_id,
-                        #        job_id=results.job_id,
-                        #        success=results.success,
-                        #        #results=results.results[:len(cal_qc)]
-                        #        results=results.results[:len(meas_calibs)]
-                        #    )
-#
-                        #    data_res = Result(backend_name=results.backend_name,
-                        #        backend_version=results.backend_version,
-                        #        qobj_id=results.qobj_id,
-                        #        job_id=results.job_id,
-                        #        success=results.success,
-                        #        #results=results.results[len(cal_qc):]
-                        #        results=results.results[len(meas_calibs):]
-                        #    )
-#
-                        #    # Apply measurement calibration and computer the calibration filter
-                        #    meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
-#
-                        #    # Apply the calibration filter to the results and get the counts
-                        #    mitigated_results = meas_filter.apply(data_res)
-                        #    counts = mitigated_results.get_counts()
-#
-                        #else:
+            result = self.qi.execute(circuits=qc, had_transpiled=True)
+            #from qiskit.tools import job_monitor
+            #job_monitor(result)
+            counts = result.get_counts()
 
-                        result = self.qi.execute(circuits=qc, had_transpiled=True)
-                        #from qiskit.tools import job_monitor
-                        #job_monitor(result)
-                        counts = result.get_counts()
+            # Handle the case of a batch containing a single image
+            if type(counts) == Counts:
+                counts = [counts]
 
-                        # Handle the case of a batch containing a single image
-                        if type(counts) == Counts:
-                            counts = [counts]
+            # Remove the bit coming from measuring the ancilla qubit
+            # (recall the convention of qiskit concerning the qubits ordering)
+            if self.use_ancilla:
+                counts = [{key[1:]: value for (key, value) in count.items()} for count in counts]
 
-                        # Remove the bit coming from measuring the ancilla qubit
-                        # (recall the convention of qiskit concerning the qubits ordering)
-                        if self.use_ancilla:
-                            counts = [{key[1:]: value for (key, value) in count.items()} for count in counts]
+            for count in counts:
+                if num_qubits*'0' not in count:
+                    count[num_qubits*'0'] = 0
 
-                        for count in counts:
-                            if num_qubits*'0' not in count:
-                                count[num_qubits*'0'] = 0
+            # The statistics give us access to the probabilities, hence to the
+            # absolute overlap squared directly.
+            overlap_squared = [count[num_qubits*'0'] / self._shots for count in counts]
+            overlap_squared = np.array(overlap_squared)
 
-                        # The statistics give us access to the probabilities, hence to the
-                        # absolute overlap squared directly.
-                        overlap_squared = [count[num_qubits*'0'] / self._shots for count in counts]
-                        overlap_squared = np.array(overlap_squared)
+        # If one uses a simulator, one can for instance
+        # directly access the output statevectors.
+        elif self._backend_name == 'statevector_simulator':
 
-                    # If one uses a simulator, one can for instance
-                    # directly access the output statevectors.
-                    elif self._backend_name == 'statevector_simulator':
+            # Preparing the state |00...0>
+            computational_basis_vector = np.zeros(shape=(2**num_qubits,))
+            computational_basis_vector[0] = 1
+            result = self.qi.execute(circuits=circuits, had_transpiled=False)
+            statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
+            statevector = np.stack(statevector)
+            overlap = np.einsum('a,ba->b', computational_basis_vector, statevector)
+            overlap_squared = np.absolute(overlap)**2 # One has to square the amplitudes to get the probabilities
 
-                        # Preparing the state |00...0>
-                        computational_basis_vector = np.zeros(shape=(2**num_qubits,))
-                        computational_basis_vector[0] = 1
-                        result = self.qi.execute(circuits=circuits, had_transpiled=False)
-                        statevector = [np.real(result.get_statevector(i)) for i in range(len(circuits))]
-                        statevector = np.stack(statevector)
-                        overlap = np.einsum('a,ba->b', computational_basis_vector, statevector)
-                        overlap_squared = np.absolute(overlap)**2 # One has to square the amplitudes to get the probabilities
+        overlap_squared = overlap_squared.reshape((X1.shape[0], X2.shape[0]))
 
-                    overlap_squared = overlap_squared.reshape((X1.shape[0], X2.shape[0]))
+        return overlap_squared
 
-                self.hash_overlap_squared[key] = overlap_squared
 
-                return overlap_squared
-
-            # In case the batches of data exceed the bound allowed by the RAM (specified by self.memory_bound),
-            # either split the batches into smaller batches and compute the overlap matrix block by block,
-            # or fully parallelize the computation of the overlap matrix.
-            else:
-
-                # compute all the overlap matrix elements in parallel
-                if self.parallelize:
-
-                    input = ((i,j) for i, j in itertools.product(range(N1), range(N2)))
-                    overlap_squared = np.zeros(shape=(N1*N2,))
-
-                    pool = mp.Pool(mp.cpu_count()-2)
-
-                    result = pool.starmap(lambda i, j: self.__overlap_squared(X1[i:i+1], X2[j:j+1]), input)
-
-                    for i, r in enumerate(result):
-                        overlap_squared[i] = r
-                    overlap_squared.shape = (N1, N2)
-
-                    pool.close()
-                    pool.join()
-
-                # embedded loops to compute the overlap matrix chunk by chunk
-                else:
-
-                    overlap_squared = np.zeros(shape=(N1, N2))
-
-                    for i in range(0, N1, self.memory_bound):
-                        for j in range(0, N2, self.memory_bound):
-
-                            X1_temp = X1[i:i+self.memory_bound]
-                            X2_temp = X2[j:j+self.memory_bound]
-                            n1 = X1_temp.shape[0]
-                            n2 = X2_temp.shape[0]
-                            overlap_squared[i:i+n1, j:j+n2] = self.__overlap_squared(X1_temp, X2_temp)
-
-                self.hash_overlap_squared[key] = overlap_squared
-
-                return overlap_squared
-
-    def __image_to_circuit(
+    def _image_to_circuit(
         self,
         image: np.ndarray
     ) -> QuantumCircuit:
@@ -323,8 +228,8 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
 
                 if image[i, j] == 1:
 
-                    binarized_i = self.__binary_formatting(digit=i, n_bits=side_qubits, reverse=False)
-                    binarized_j = self.__binary_formatting(digit=j, n_bits=side_qubits, reverse=False)
+                    binarized_i = self._binary_formatting(digit=i, n_bits=side_qubits, reverse=False)
+                    binarized_j = self._binary_formatting(digit=j, n_bits=side_qubits, reverse=False)
 
                     flip_idx = []
 
@@ -362,7 +267,7 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
         return qc
 
     @staticmethod
-    def __binary_formatting(
+    def _binary_formatting(
         digit: int,
         n_bits: int,
         reverse: bool = False,
@@ -382,3 +287,53 @@ class Quantum_Kernel(KernelRidgeRegression, QiskitKernel):
             binary = binary[::-1]
 
         return binary
+
+
+
+
+
+
+
+
+
+
+
+
+###
+
+            #if self.mitigate:
+            #    qr = QuantumRegister(self.n_qubits)
+            #    meas_calibs, state_labels = complete_meas_cal(qr=qr, circlabel='mcal')
+            #    #cal_qc = transpile(meas_calibs, self.qi.backend)
+            #    #qc = cal_qc + qc
+            #    qc = meas_calibs + qc
+#
+            #    results = self.qi.execute(circuits=qc, had_transpiled=True)
+#
+            #    # Split the results into to Result objects for calibration and kernel computation
+            #    cal_res = Result(backend_name=results.backend_name,
+            #        backend_version=results.backend_version,
+            #        qobj_id=results.qobj_id,
+            #        job_id=results.job_id,
+            #        success=results.success,
+            #        #results=results.results[:len(cal_qc)]
+            #        results=results.results[:len(meas_calibs)]
+            #    )
+#
+            #    data_res = Result(backend_name=results.backend_name,
+            #        backend_version=results.backend_version,
+            #        qobj_id=results.qobj_id,
+            #        job_id=results.job_id,
+            #        success=results.success,
+            #        #results=results.results[len(cal_qc):]
+            #        results=results.results[len(meas_calibs):]
+            #    )
+#
+            #    # Apply measurement calibration and computer the calibration filter
+            #    meas_filter = CompleteMeasFitter(cal_res, state_labels, circlabel='mcal').filter
+#
+            #    # Apply the calibration filter to the results and get the counts
+            #    mitigated_results = meas_filter.apply(data_res)
+            #    counts = mitigated_results.get_counts()
+#
+            #else:

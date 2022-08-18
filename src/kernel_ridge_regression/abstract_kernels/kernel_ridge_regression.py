@@ -46,8 +46,10 @@ class KernelRidgeRegression(ABC):
         super().__init__(*args, **kwargs)
 
         self.name: Optional[str] = None
-
         self.dataset: dict = {}
+
+        # We define some hash table to store relevant tensors
+        # in order not to redo computations.
         self.hash_gram: Dict[int, np.ndarray] = {}
         self.hash_distances_squared: Dict[int, np.ndarray] = {}
 
@@ -72,7 +74,6 @@ class KernelRidgeRegression(ABC):
 
     @gamma.setter
     def gamma(self, gamma):
-
         self._gamma = gamma
 
     def fit_choleski(
@@ -95,7 +96,7 @@ class KernelRidgeRegression(ABC):
         # compute it if not already in self.hash_gram
         key = str(hash((X.tobytes(), X.tobytes(), self.gamma)))
         if not key in self.hash_gram:
-            self.hash_gram[key] = self.kernel(X, X)
+            self.hash_gram[key] = self._kernel(X, X)
         K = self.hash_gram[key]
 
         # Analytic solution for the parameters of the model (the loss function is just quadratic in alpha)
@@ -127,7 +128,7 @@ class KernelRidgeRegression(ABC):
         # compute it if not already in self.hash
         key = hash((X.tobytes(), X.tobytes(), self.gamma))
         if not key in self.hash_gram:
-            self.hash_gram[key] = self.kernel(X, X)
+            self.hash_gram[key] = self._kernel(X, X)
         K = self.hash_gram[key]
 
         # Initialization of the parameters
@@ -161,13 +162,14 @@ class KernelRidgeRegression(ABC):
 
         # Get parameters
         self.dataset['X'] = X
+        self.dataset['y'] = y
 
         # What we mean by 'distances_squared' here depends on the specific kernel we are looking at.
         # In the classical case it is just the matrix of Euclidean distances squared ||x_1 - x_2||^2.
         # In the quantum case it is ||\rho(x_1) - \rho(x_2)||_F^2 = 2 (1-|<psi_1|psi_2>|^2).
         key = str(hash((X.tobytes(), X.tobytes())))
         if not key in self.hash_distances_squared:
-            self.hash_distances_squared[key] = self.distances_squared(X, X)
+            self.hash_distances_squared[key] = self._distances_squared(X, X)
         distances_squared = self.hash_distances_squared[key]
 
         # Initialization of the parameters
@@ -176,9 +178,7 @@ class KernelRidgeRegression(ABC):
         self.gamma = 1.0 / (X.var() * X.shape[1])
 
         # Entering in the training loop
-        for i in tqdm(range(number_epochs)):
-
-            print(i)
+        for _ in tqdm(range(number_epochs)):
 
             K = np.exp(-self.gamma * distances_squared)
             dK = -distances_squared * K
@@ -206,9 +206,9 @@ class KernelRidgeRegression(ABC):
             (np.ndarray): The predicted labels.
         """
 
-        key = hash((self.dataset['X'].tobytes(), X.tobytes()))
+        key = hash((self.dataset['X'].tobytes(), X.tobytes(), self.gamma))
         if not key in self.hash_gram:
-            self.hash_gram[key] = self.kernel(self.dataset['X'], X)
+            self.hash_gram[key] = self._kernel(self.dataset['X'], X)
         K = self.hash_gram[key]
 
         y_predicted = np.sum(self.alpha.reshape(-1, 1) * K, axis=0)
@@ -232,32 +232,38 @@ class KernelRidgeRegression(ABC):
         y_predicted = self.predict(X)
         return float(loss(y, y_predicted))
 
-    @abstractmethod
-    def kernel(
+    def _kernel(
         self,
         X1: np.ndarray,
         X2: np.ndarray,
-        *args,
-        **kwargs
     ) -> np.ndarray:
-        r"""Method to compute the Gram matrix corresponding to the two batches of data X1 and X2.
-        To be implemented by the children classes.
+        r"""Compute the Gram matrix associated to the batches X1 and X2.
         Args:
-            X1 (np.ndarray): First batch of data.
-            X2 (np.ndarray): Second batch of data.
+            X1 (np.ndarray): First batch of 1-D array data vector.
+            X2 (np.ndarray): Second batch of 1-D array data vector.
+        Returns:
+            (np.ndarray): Gram matrix associated to the two batches of data X1 and X2.
         """
 
-        raise NotImplementedError
+        # Check if the distance squared matrix is cashed.
+        key = hash((X1.tobytes(), X2.tobytes()))
+        if not key in self.hash_distances_squared:
+            self.hash_distances_squared[key] = self._distances_squared(X1=X1, X2=X2)
+        distances_squared = self.hash_distances_squared[key]
+
+        gram = np.exp(-self.gamma * distances_squared) if self.gamma is not None else distances_squared
+        return gram
 
     @abstractmethod
-    def distances_squared(
+    def _distances_squared(
         self,
         X1: np.ndarray,
         X2: np.ndarray,
-        *args,
-        **kwargs
     ) -> np.ndarray:
-        r""" Compute the matrix of squared distances.
+        r"""Compute the matrix of squared distances.
+        What we mean by 'distances_squared' here depends on the specific kernel we are looking at.
+        In the classical case it is just the matrix of Euclidean distances squared ||x_1 - x_2||^2.
+        In the quantum case it is ||\rho(x_1) - \rho(x_2)||_F^2 = 2 (1-|<psi_1|psi_2>|^2).
         Args:
             X1 (np.ndarray): First batch of 1-D array data vector.
             X2 (np.ndarray): Second batch of 1-D array data vector.
