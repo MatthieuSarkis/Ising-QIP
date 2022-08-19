@@ -1,8 +1,8 @@
 src.data\_factory package
 =========================
 
-Submodules
-----------
+.. Submodules
+.. ----------
 
 src.data\_factory.neqr module
 -----------------------------

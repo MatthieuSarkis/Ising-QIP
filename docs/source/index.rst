@@ -3,14 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Ising-QIP's documentation!
-=====================================
+Quantum Image Processing of spin lattice models
+===============================================
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: API documentation:
 
-   apidoc.modules.rst
+   apidoc/modules.rst
 
 
 .. Indices and tables

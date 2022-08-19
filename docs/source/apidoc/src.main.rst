@@ -1,8 +1,8 @@
 src.main package
 ================
 
-Submodules
-----------
+.. Submodules
+.. ----------
 
 src.main.main\_autoker module
 -----------------------------

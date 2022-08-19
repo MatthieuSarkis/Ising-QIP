@@ -1,8 +1,8 @@
 src.kernel\_ridge\_regression.kernels package
 =============================================
 
-Submodules
-----------
+.. Submodules
+.. ----------
 
 src.kernel\_ridge\_regression.kernels.classical\_kernel module
 --------------------------------------------------------------

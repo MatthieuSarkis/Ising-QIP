@@ -29,7 +29,7 @@ pip install -e .
 
 Here is $4\times 4$ lattice representing a configuration of the Ising model.
 
-![4*4 Ising configuration](./assets/ising.png "4*4 Ising configuration")
+![4*4 Ising configuration](./docs/source/_static/images/ising.png "4*4 Ising configuration")
 
 The idea is to encode an Ising configuration in a quantum state, in an economical way in terms of the number of required qubits.
 Let us denote by $L$ the size of the square lattice. Let us denote $q :=\lceil\log_2L\rceil$. The number of required qubits in the quantum embedding discussed here is $n:=2q+1$, corresponding to $q$ qubits for the horizontal location, $q$ qubits for the vertical location, and $1$ 'spin qubit' containing the information on the binary value of the spin at a given location.
@@ -37,7 +37,7 @@ Let us denote by $L$ the size of the square lattice. Let us denote $q :=\lceil\l
 Initially the state $|0\rangle^{\otimes n}$ is acted upon by $I\otimes H^{2q}$, where $H$ is the Hadamard gate, in order to produce a fully entangled state, with the spin qubit untouched. One obtains the following state:
 $|0\rangle\otimes\sum_{i=0,\dots,2^{2q}-1}|i\rangle$. Remains to implement a flip gate on the spin qubit whenever the spin at the location specific location if $+1$, and leave it untouched when the corresponding spin it $-1$. This is implemented by a controlled $X$ gate. The quantum circuit corresponding to the above Ising configuration is for instance given by:
 
-![Circuit](./assets/circuit.png "Circuit")
+![Circuit](./docs/source/_static/images/circuit.png "Circuit")
 
 From the quantum circuit, on can then extract a state vector from measurement statistics. Let us denote by $x$ some spin configuration in the dataset. One therefore associates to it a pure $|\psi(x)\rangle=\mathcal U(x)|0\rangle^{\otimes n}$, or alternatively the rank-1 density matrix $\rho(x)=|\psi(x)\rangle\langle\psi(x)|$.
 

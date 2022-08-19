@@ -1,8 +1,8 @@
 src.kernel\_ridge\_regression package
 =====================================
 
-Subpackages
------------
+.. Subpackages
+.. -----------
 
 .. toctree::
    :maxdepth: 4
@@ -10,8 +10,8 @@ Subpackages
    src.kernel_ridge_regression.abstract_kernels
    src.kernel_ridge_regression.kernels
 
-Submodules
-----------
+.. Submodules
+.. ----------
 
 src.kernel\_ridge\_regression.grid module
 -----------------------------------------

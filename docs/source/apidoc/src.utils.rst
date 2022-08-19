@@ -1,8 +1,8 @@
 src.utils package
 =================
 
-Submodules
-----------
+.. Submodules
+.. ----------
 
 src.utils.loss\_functions module
 --------------------------------
