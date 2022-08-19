@@ -1,5 +1,5 @@
 .. Ising-QIP documentation master file, created by
-   sphinx-quickstart on Thu Aug 18 17:20:34 2022.
+   sphinx-quickstart on Fri Aug 19 15:38:17 2022.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
@@ -10,15 +10,12 @@ Welcome to Ising-QIP's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   usage
-
-Check out the :doc:`usage` section for further information, including how to
-:ref:`install <installation>` the project.
+   apidoc.modules.rst
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. Indices and tables
+.. ==================
+..
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`

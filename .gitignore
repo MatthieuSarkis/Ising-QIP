@@ -6,12 +6,9 @@ __pycache__
 *.egg-info/
 build/
 dist/
-paper/
 
 data/
 saved_models/
-notebooks/
-bash/
 
 *.aux
 *.bbl
